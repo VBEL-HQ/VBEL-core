@@ -1,0 +1,21 @@
+{
+  "description": "RFC 8785 canonicalization + SHA-256 test vector. hashCanonical(input) must equal expectedHash in every implementation. Do not edit input without recomputing expectedHash.",
+  "input": {
+    "schema": "urn:vbel:event:delivery-dispatched:v1",
+    "eventId": "01J6ZQK8N2X3YV9F5T7C4M6R8W",
+    "subjectId": "urn:vbel:shipment:9f2c1a7e-3b4d-4e5f-8a6b-1c2d3e4f5a6b",
+    "issuerId": "urn:vbel:org:supplier-a",
+    "issuedAt": "2026-08-26T09:14:00Z",
+    "previousEventHash": null,
+    "payloadHash": "sha256:3f1ea6180b6b1e2b7f8f6e5d4c3b2a19f0e1d2c3b4a5968778695a4b3c2d1e0",
+    "status": "ACTIVE",
+    "supersedes": null,
+    "supersedeReason": null,
+    "revokes": null,
+    "revokeReason": null,
+    "policyId": "urn:vbel:policy:v1",
+    "privacy": "off-chain",
+    "nonce": "b7c1d2e3f4a5968778695a4b3c2d1e0f"
+  },
+  "expectedHash": "sha256:496b995950d8a830698ff8fa463f1f75432e679cfd984cdb0b121e1ab104272a"
+}
