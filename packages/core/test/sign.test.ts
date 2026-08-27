@@ -49,7 +49,7 @@ describe("signEnvelope / verifyEnvelopeSignature", () => {
     const result = await verifyEvent(tampered);
 
     expect(result.valid).toBe(false);
-    expect(result.issues.join(" ")).toMatch(/eventHash does not match/);
+    expect(result.issues.map((issue) => issue.code)).toContain("EVENT_HASH_MISMATCH");
   });
 
   it("fails verification with the wrong signer's key", async () => {

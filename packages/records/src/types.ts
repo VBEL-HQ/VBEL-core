@@ -1,4 +1,4 @@
-import type { AnchorReceipt, FieldDifference, SignedEvent } from "@vbel/core";
+import type { AnchorReceipt, FieldDifference, SignedEvent, VerificationIssue } from "@vbel/core";
 import type { AcceptancePayload, DispatchPayload } from "@vbel/domain-delivery";
 
 export type DeliveryPayload = DispatchPayload | AcceptancePayload;
@@ -25,7 +25,13 @@ export interface LedgerRecord {
 export interface RecordVerdict {
   /** Envelope hash integrity plus the issuer signature. */
   signatureValid: boolean;
-  signatureIssues: string[];
+  signatureIssues: VerificationIssue[];
+  /**
+   * False when no IdentityResolver was supplied, which is the current state
+   * of this app: signatures are checked against the key embedded in the
+   * event, and nothing confirms that key belongs to the issuer it names.
+   */
+  identityChecked: boolean;
   /** Does the stored document still hash to what was signed. */
   payloadValid: boolean;
   differences: FieldDifference[];
