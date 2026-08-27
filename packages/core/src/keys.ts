@@ -26,3 +26,15 @@ export function publicKeyFromHex(hex: string): Uint8Array {
 export function privateKeyFromHex(hex: string): Uint8Array {
   return hexToBytes(hex);
 }
+
+/** Reconstructs a full KeyPair from a private key hex — a fixed seed rather than `randomPrivateKey()`. */
+export async function keyPairFromPrivateHex(privateKeyHex: string): Promise<KeyPair> {
+  const privateKey = hexToBytes(privateKeyHex);
+  const publicKey = await ed25519.getPublicKeyAsync(privateKey);
+  return {
+    privateKey,
+    publicKey,
+    privateKeyHex,
+    publicKeyHex: bytesToHex(publicKey),
+  };
+}
