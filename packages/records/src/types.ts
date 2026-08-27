@@ -37,7 +37,7 @@ export interface RecordVerdict {
    * False when no IdentityResolver was supplied. In this app's demo
    * scenario, checked against a live ENS text record on Sepolia when
    * ENS_PARENT_NAME is configured, falling back to a small in-memory
-   * registry otherwise — see lib/scenario.ts.
+   * registry otherwise — see lib/identity.ts.
    */
   identityChecked: boolean;
   /** Does the stored document still hash to what was signed. */
