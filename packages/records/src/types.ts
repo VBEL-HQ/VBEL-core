@@ -34,10 +34,10 @@ export interface RecordVerdict {
   signatureValid: boolean;
   signatureIssues: VerificationIssue[];
   /**
-   * False when no IdentityResolver was supplied. True in this app's demo
-   * scenario, checked against a small in-memory registry built from the
-   * keys actually used to sign — see lib/scenario.ts. A real deployment
-   * would resolve against ENS, did:web, or an eIDAS chain instead.
+   * False when no IdentityResolver was supplied. In this app's demo
+   * scenario, checked against a live ENS text record on Sepolia when
+   * ENS_PARENT_NAME is configured, falling back to a small in-memory
+   * registry otherwise — see lib/scenario.ts.
    */
   identityChecked: boolean;
   /** Does the stored document still hash to what was signed. */
