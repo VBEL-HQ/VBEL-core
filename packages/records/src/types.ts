@@ -1,4 +1,4 @@
-import type { AnchorReceipt, FieldDifference, SignedEvent, VerificationIssue } from "@vbel/core";
+import type { AnchorReceipt, FieldDifference, LedgerVerificationResult, SignedEvent, VerificationIssue } from "@vbel/core";
 import type { AcceptancePayload, DispatchPayload } from "@vbel/domain-delivery";
 
 export type DeliveryPayload = DispatchPayload | AcceptancePayload;
@@ -20,6 +20,13 @@ export interface LedgerRecord {
    */
   issuerPayload: DeliveryPayload;
   anchor: AnchorReceipt | null;
+  /**
+   * Result of re-fetching the anchor transaction from Solana and confirming
+   * its memo still carries this event's hash — distinct from `anchor` being
+   * set, which only means the anchor call itself returned a receipt. Null
+   * until that re-check has run.
+   */
+  chainVerification: LedgerVerificationResult | null;
 }
 
 export interface RecordVerdict {
@@ -27,9 +34,10 @@ export interface RecordVerdict {
   signatureValid: boolean;
   signatureIssues: VerificationIssue[];
   /**
-   * False when no IdentityResolver was supplied, which is the current state
-   * of this app: signatures are checked against the key embedded in the
-   * event, and nothing confirms that key belongs to the issuer it names.
+   * False when no IdentityResolver was supplied. True in this app's demo
+   * scenario, checked against a small in-memory registry built from the
+   * keys actually used to sign — see lib/scenario.ts. A real deployment
+   * would resolve against ENS, did:web, or an eIDAS chain instead.
    */
   identityChecked: boolean;
   /** Does the stored document still hash to what was signed. */
