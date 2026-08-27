@@ -1,0 +1,31 @@
+{
+  "name": "@vbel/adapter-ethereum",
+  "version": "0.0.1",
+  "description": "LedgerAdapter implementation over Ethereum calldata transactions. Execution only — config is injected, never read from process.env here.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "smoke:anchor": "tsx scripts/smoke-anchor.ts"
+  },
+  "dependencies": {
+    "@vbel/core": "workspace:*",
+    "viem": "^2.35.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "@vbel/config": "workspace:*",
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}
