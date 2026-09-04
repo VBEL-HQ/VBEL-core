@@ -15,7 +15,37 @@ import {
   SCHEMA_DISPATCHED,
   SCHEMA_SETTLED,
 } from "@vbel/domain-delivery";
+import {
+  DisputePayloadSchema,
+  ExecutionPayloadSchema,
+  IrregularityPayloadSchema,
+  ObligationPayloadSchema,
+  ResolutionPayloadSchema,
+  SCHEMA_DISPUTE,
+  SCHEMA_EXECUTED,
+  SCHEMA_IRREGULARITY,
+  SCHEMA_OBLIGATION,
+  SCHEMA_RESOLUTION,
+} from "@vbel/domain-payment";
 import type { LedgerRecord } from "./types";
+
+/**
+ * Every schema this app will decode, and the shape each one must satisfy.
+ * A record arriving in a URL is hostile input; an envelope naming a schema
+ * that is not in this table is rejected rather than passed through, so a
+ * new event type cannot reach the UI until someone has decided what valid
+ * looks like for it.
+ */
+const PAYLOAD_SCHEMAS = {
+  [SCHEMA_DISPATCHED]: DispatchPayloadSchema,
+  [SCHEMA_ACCEPTED]: AcceptancePayloadSchema,
+  [SCHEMA_SETTLED]: SettlementPayloadSchema,
+  [SCHEMA_OBLIGATION]: ObligationPayloadSchema,
+  [SCHEMA_EXECUTED]: ExecutionPayloadSchema,
+  [SCHEMA_IRREGULARITY]: IrregularityPayloadSchema,
+  [SCHEMA_DISPUTE]: DisputePayloadSchema,
+  [SCHEMA_RESOLUTION]: ResolutionPayloadSchema,
+} as const;
 
 /**
  * Thrown when an encoded chain cannot be decoded into fully valid records.
@@ -183,14 +213,8 @@ export async function decodeChain(encoded: string): Promise<LedgerRecord[]> {
     }
     const event = eventResult.data;
 
-    let payloadSchema;
-    if (event.envelope.schema === SCHEMA_DISPATCHED) {
-      payloadSchema = DispatchPayloadSchema;
-    } else if (event.envelope.schema === SCHEMA_ACCEPTED) {
-      payloadSchema = AcceptancePayloadSchema;
-    } else if (event.envelope.schema === SCHEMA_SETTLED) {
-      payloadSchema = SettlementPayloadSchema;
-    } else {
+    const payloadSchema = PAYLOAD_SCHEMAS[event.envelope.schema as keyof typeof PAYLOAD_SCHEMAS];
+    if (!payloadSchema) {
       throw new ChainDecodeError(
         `Record at index ${i} has unrecognized envelope schema "${event.envelope.schema}"`
       );
