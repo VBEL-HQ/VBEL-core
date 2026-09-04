@@ -6,7 +6,7 @@
  *
  * Shape: JSON -> gzip (CompressionStream) -> base64url, unpadded.
  */
-import { SignedEventSchema } from "@vbel/core";
+import { DisclosurePayloadSchema, SCHEMA_DISCLOSURE, SignedEventSchema } from "@vbel/core";
 import {
   AcceptancePayloadSchema,
   DispatchPayloadSchema,
@@ -31,7 +31,7 @@ import {
   SCHEMA_REFUND,
   SCHEMA_RESOLUTION,
 } from "@vbel/domain-payment";
-import type { LedgerRecord } from "./types";
+import { disclosedPayload, withheldPayload, type LedgerRecord, type PayloadSlot } from "./types";
 
 /**
  * Every schema this app will decode, and the shape each one must satisfy.
@@ -51,6 +51,7 @@ const PAYLOAD_SCHEMAS = {
   [SCHEMA_IRREGULARITY]: IrregularityPayloadSchema,
   [SCHEMA_DISPUTE]: DisputePayloadSchema,
   [SCHEMA_RESOLUTION]: ResolutionPayloadSchema,
+  [SCHEMA_DISCLOSURE]: DisclosurePayloadSchema,
 } as const;
 
 /**
@@ -66,24 +67,38 @@ export class ChainDecodeError extends Error {
 
 /**
  * QR byte mode caps out near 2953 bytes at the lowest error correction
- * level. This is the hard ceiling: past it the handoff is copy-link only,
- * with no QR fallback at all.
+ * level. Past it the handoff is copy-link only, with no QR fallback.
+ *
+ * Measured, not assumed, for the seven-record payment arc (obligation,
+ * mandate, drawn payment, irregularity, dispute, resolution, refund):
+ *
+ *   full chain                          3662   over
+ *   redacted, one payload revealed      2840   under
+ *   redacted, nothing revealed          2670   under
+ *   redacted plus its cover sheet       3394   over
+ *
+ * So redaction does clear the ceiling and the cover sheet puts it back over,
+ * and the two cannot be separated: a cover sheet chains to the disclosed
+ * head, so verified without that chain it reports a dangling predecessor.
+ * QR is therefore available for a redacted chain and not for a disclosure of
+ * one, at this size.
+ *
+ * The cost is dominated by envelopes rather than payloads, which is why
+ * redacting a three-record chain saves only about a sixth: each envelope
+ * carries two UUIDs, a 64-character public key and a 128-character
+ * signature, all hex. Moving those to base64 is the available win if a
+ * disclosure ever has to fit in a QR code.
  */
 export const QR_BYTE_CEILING = 2953;
 
 /**
- * The budget a delivery-only chain — dispatch, acceptance, correction — is
- * held to. Deliberately well under QR_BYTE_CEILING so a scan still works on
- * a phone camera at a loading bay rather than only in ideal conditions.
+ * The budget a delivery-only chain is held to. Deliberately under
+ * QR_BYTE_CEILING so a scan works on a phone camera at a loading bay rather
+ * than only in ideal conditions.
  *
- * A settled chain does not fit this budget: settlement adds a payment
- * object, a second hash and another pair of UUIDs, and measures around
- * 2,150 characters for three records. That is still comfortably inside the
- * QR ceiling, so nothing is broken — but the comfortable margin is gone,
- * and a four-record settled-and-corrected chain has not been measured.
- * Neither is enforced at encode time; they are budgets to test against, not
- * limits to fail on, because a chain that cannot be QR-encoded is still a
- * perfectly good chain to send as a link.
+ * Neither number is enforced at encode time. They are budgets to measure
+ * against, not limits to fail on, because a chain too large to scan is still
+ * a perfectly good chain to send as a link.
  */
 export const MAX_ENCODED_LENGTH = 2000;
 
@@ -153,6 +168,27 @@ async function gzipDecompress(bytes: Uint8Array): Promise<Uint8Array> {
   }
 }
 
+/**
+ * Strips every payload except the ones named, keeping every envelope.
+ *
+ * This is the whole of selective disclosure, and it needed no new
+ * cryptography: an envelope commits to its payload by hash and never
+ * contains it, so removing payloads leaves every signature verifiable,
+ * every previousEventHash link intact, and the ordering provable. Only "what
+ * did this record say" goes away, and only for the records left out.
+ *
+ * The anchor receipt travels with a withheld record on purpose. It is a
+ * transaction on a public chain carrying the eventHash, which is already
+ * present in the envelope, so it discloses nothing further and it is what
+ * lets a recipient date a record they cannot read.
+ */
+export function redactChain(records: LedgerRecord[], revealEventIds: Iterable<string>): LedgerRecord[] {
+  const reveal = new Set(revealEventIds);
+  return records.map((record) =>
+    reveal.has(record.event.envelope.eventId) ? record : { ...record, payload: withheldPayload() }
+  );
+}
+
 export async function encodeChain(records: LedgerRecord[]): Promise<string> {
   const json = JSON.stringify(records);
   const jsonBytes = new TextEncoder().encode(json);
@@ -165,8 +201,8 @@ export async function encodeChain(records: LedgerRecord[]): Promise<string> {
  * every record is validated against SignedEventSchema and the matching
  * payload schema before it is returned.
  *
- * Note that `LedgerRecord.issuerPayload` rides along purely so the UI can
- * name which field changed. It is not a security input — the envelope's
+ * Note that the issuer copy in a present slot rides along purely so the UI
+ * can name which field changed. It is not a security input — the envelope's
  * signed payloadHash is what actually detects tampering — so no trust
  * decision may be derived from it here.
  *
@@ -226,23 +262,45 @@ export async function decodeChain(encoded: string): Promise<LedgerRecord[]> {
       );
     }
 
-    const storedResult = payloadSchema.safeParse((raw as { storedPayload?: unknown }).storedPayload);
-    if (!storedResult.success) {
-      const issues = storedResult.error.issues
-        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-        .join(", ");
-      throw new ChainDecodeError(`Record at index ${i} has invalid storedPayload: ${issues}`);
+    /**
+     * Withheld is a *declared* state, never an inferred one. A record whose
+     * payload is simply missing, or whose slot claims to be present without
+     * one, still throws exactly as before — so a chain stripped in transit
+     * and a chain redacted on purpose are distinguishable at the point of
+     * parsing, and only the second is accepted.
+     */
+    const rawSlot = (raw as { payload?: unknown }).payload;
+    if (typeof rawSlot !== "object" || rawSlot === null) {
+      throw new ChainDecodeError(`Record at index ${i} has no payload slot`);
     }
-    const storedPayload = storedResult.data;
+    const slotState = (rawSlot as { state?: unknown }).state;
 
-    const issuerResult = payloadSchema.safeParse((raw as { issuerPayload?: unknown }).issuerPayload);
-    if (!issuerResult.success) {
-      const issues = issuerResult.error.issues
-        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-        .join(", ");
-      throw new ChainDecodeError(`Record at index ${i} has invalid issuerPayload: ${issues}`);
+    let payload: PayloadSlot;
+    if (slotState === "withheld") {
+      payload = withheldPayload();
+    } else if (slotState === "present") {
+      const storedResult = payloadSchema.safeParse((rawSlot as { stored?: unknown }).stored);
+      if (!storedResult.success) {
+        const issues = storedResult.error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join(", ");
+        throw new ChainDecodeError(`Record at index ${i} has invalid stored payload: ${issues}`);
+      }
+
+      const issuerResult = payloadSchema.safeParse((rawSlot as { issuer?: unknown }).issuer);
+      if (!issuerResult.success) {
+        const issues = issuerResult.error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join(", ");
+        throw new ChainDecodeError(`Record at index ${i} has invalid issuer payload: ${issues}`);
+      }
+
+      payload = disclosedPayload(storedResult.data, issuerResult.data);
+    } else {
+      throw new ChainDecodeError(
+        `Record at index ${i} has an unrecognised payload state ${JSON.stringify(slotState)}`
+      );
     }
-    const issuerPayload = issuerResult.data;
 
     const anchor = (raw as { anchor?: unknown }).anchor ?? null;
     if (anchor !== null && (typeof anchor !== "object" || anchor === null)) {
@@ -257,8 +315,7 @@ export async function decodeChain(encoded: string): Promise<LedgerRecord[]> {
     records.push({
       label: (raw as { label: string }).label,
       event,
-      storedPayload,
-      issuerPayload,
+      payload,
       anchor: anchor as LedgerRecord["anchor"],
       chainVerification: chainVerification as LedgerRecord["chainVerification"],
     });

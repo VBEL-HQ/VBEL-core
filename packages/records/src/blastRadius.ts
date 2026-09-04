@@ -8,6 +8,11 @@ import type { LedgerRecord, RecordVerdict } from "./types";
  * from every record whose stored payload no longer matches what was signed,
  * and returns, for each record, which disputed record(s) it descends from.
  * Empty for a record with no disputed ancestor.
+ *
+ * Seeds from `mismatch` only, never from `withheld`. A withheld payload is
+ * a record somebody chose not to show, not a record that failed a check,
+ * and seeding from it would mark every descendant of a lawful redaction as
+ * contaminated — accusing the discloser of forgery for redacting.
  */
 export function computeBlastRadius(
   records: LedgerRecord[],
@@ -15,7 +20,7 @@ export function computeBlastRadius(
 ): Map<string, Set<string>> {
   const disputedIds = new Set(
     records
-      .filter((r) => verdicts.get(r.event.envelope.eventId)?.payloadValid === false)
+      .filter((r) => verdicts.get(r.event.envelope.eventId)?.payloadState === "mismatch")
       .map((r) => r.event.envelope.eventId)
   );
 

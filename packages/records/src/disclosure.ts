@@ -1,0 +1,107 @@
+import {
+  buildDisclosureEnvelope,
+  SCHEMA_DISCLOSURE,
+  signEnvelope,
+  type DisclosurePayload,
+  type KeyPair,
+} from "@vbel/core";
+import { redactChain } from "./recordCodec";
+import { disclosedPayload, type LedgerRecord } from "./types";
+
+export interface DisclosureRequest {
+  /** The chain being shown. Disclosure records already in it are never re-disclosed. */
+  records: LedgerRecord[];
+  keys: KeyPair;
+  /** The discloser, whose key signs. Split by console, as every other signature is. */
+  discloserId: string;
+  recipient: string;
+  /** eventIds whose payloads travel. Everything else keeps its envelope only. */
+  revealEventIds: string[];
+  inResponseTo?: string | null;
+}
+
+export interface DisclosureBundle {
+  /** The redacted chain plus the cover sheet, in the order a reader meets them. */
+  bundle: LedgerRecord[];
+  disclosure: LedgerRecord;
+  revealedEventIds: string[];
+  withheldEventIds: string[];
+}
+
+/**
+ * Produces what a recipient actually receives: the redacted chain and the
+ * signed statement of what was done to it.
+ *
+ * The two travel together and that is a requirement rather than a
+ * presentation choice. The cover sheet's `previousEventHash` is the
+ * disclosed chain's head, and `validateChain` resolves that link within the
+ * events it is handed, so a cover sheet verified alone reports a dangling
+ * predecessor.
+ *
+ * Disclosure records already present in `records` are dropped before
+ * anything else happens, and this is the enforcement point for the
+ * recursion decision rather than a default someone can flip. A later
+ * disclosure that carried an earlier one would tell auditor B that auditor
+ * A exists, which is a fact about who is being reviewed and by whom, not a
+ * fact about the transaction.
+ *
+ * Note that withholding the payload would not be enough to prevent that
+ * leak: for a disclosure record the envelope's mere presence is the
+ * disclosure. Omitting it entirely is only clean because a disclosure sits
+ * on its own subject, so removing it leaves no gap in the disclosed chain's
+ * continuity. Had disclosures been appended to the chain, omitting one would
+ * have left a visible hole and forced a choice between leaking and looking
+ * evasive.
+ *
+ * Including a past disclosure as evidence, to prove to one regulator that
+ * you disclosed to their counterpart, stays possible. It is a deliberate act
+ * of naming that record in a new disclosure, never something that happens
+ * because a bundle was passed back in.
+ */
+export async function buildDisclosure(request: DisclosureRequest): Promise<DisclosureBundle> {
+  const chain = request.records.filter((r) => r.event.envelope.schema !== SCHEMA_DISCLOSURE);
+  const head = chain[chain.length - 1];
+  if (!head) throw new Error("cannot disclose: there is no chain here");
+
+  const first = chain[0]!;
+  const reveal = new Set(request.revealEventIds);
+
+  const revealedEventIds: string[] = [];
+  const withheldEventIds: string[] = [];
+  for (const record of chain) {
+    const id = record.event.envelope.eventId;
+    (reveal.has(id) ? revealedEventIds : withheldEventIds).push(id);
+  }
+
+  const payload: DisclosurePayload = {
+    disclosedSubjectId: first.event.envelope.subjectId,
+    disclosedHeadHash: head.event.eventHash,
+    revealedEventIds,
+    withheldEventIds,
+    recipient: request.recipient,
+    disclosedBy: request.discloserId,
+    disclosedAt: new Date().toISOString(),
+    inResponseTo: request.inResponseTo ?? null,
+  };
+
+  const event = await signEnvelope({
+    envelope: buildDisclosureEnvelope({ payload }),
+    signer: request.keys,
+    signerId: request.discloserId,
+  });
+
+  const disclosure: LedgerRecord = {
+    label: "Disclosure",
+    event,
+    payload: disclosedPayload(payload),
+    anchor: null,
+    chainVerification: null,
+  };
+
+  return {
+    bundle: [...redactChain(chain, revealedEventIds), disclosure],
+    disclosure,
+    revealedEventIds,
+    withheldEventIds,
+  };
+}
