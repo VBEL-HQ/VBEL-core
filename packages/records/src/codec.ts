@@ -10,8 +10,10 @@ import { SignedEventSchema } from "@vbel/core";
 import {
   AcceptancePayloadSchema,
   DispatchPayloadSchema,
+  SettlementPayloadSchema,
   SCHEMA_ACCEPTED,
   SCHEMA_DISPATCHED,
+  SCHEMA_SETTLED,
 } from "@vbel/domain-delivery";
 import type { LedgerRecord } from "./types";
 
@@ -27,9 +29,25 @@ export class ChainDecodeError extends Error {
 }
 
 /**
- * The encoded string has to fit in a QR code, which caps out near 2953
- * bytes. A three-record chain must stay under this or the handoff falls
- * back to copy-link only.
+ * QR byte mode caps out near 2953 bytes at the lowest error correction
+ * level. This is the hard ceiling: past it the handoff is copy-link only,
+ * with no QR fallback at all.
+ */
+export const QR_BYTE_CEILING = 2953;
+
+/**
+ * The budget a delivery-only chain — dispatch, acceptance, correction — is
+ * held to. Deliberately well under QR_BYTE_CEILING so a scan still works on
+ * a phone camera at a loading bay rather than only in ideal conditions.
+ *
+ * A settled chain does not fit this budget: settlement adds a payment
+ * object, a second hash and another pair of UUIDs, and measures around
+ * 2,150 characters for three records. That is still comfortably inside the
+ * QR ceiling, so nothing is broken — but the comfortable margin is gone,
+ * and a four-record settled-and-corrected chain has not been measured.
+ * Neither is enforced at encode time; they are budgets to test against, not
+ * limits to fail on, because a chain that cannot be QR-encoded is still a
+ * perfectly good chain to send as a link.
  */
 export const MAX_ENCODED_LENGTH = 2000;
 
@@ -170,6 +188,8 @@ export async function decodeChain(encoded: string): Promise<LedgerRecord[]> {
       payloadSchema = DispatchPayloadSchema;
     } else if (event.envelope.schema === SCHEMA_ACCEPTED) {
       payloadSchema = AcceptancePayloadSchema;
+    } else if (event.envelope.schema === SCHEMA_SETTLED) {
+      payloadSchema = SettlementPayloadSchema;
     } else {
       throw new ChainDecodeError(
         `Record at index ${i} has unrecognized envelope schema "${event.envelope.schema}"`

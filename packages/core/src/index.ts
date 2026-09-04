@@ -6,4 +6,5 @@ export * from "./identity.js";
 export * from "./sign.js";
 export * from "./lifecycle.js";
 export * from "./ledger.js";
+export * from "./payment.js";
 export * from "./payload.js";

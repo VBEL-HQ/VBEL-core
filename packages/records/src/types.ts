@@ -1,7 +1,12 @@
 import type { AnchorReceipt, FieldDifference, LedgerVerificationResult, SignedEvent, VerificationIssue } from "@vbel/core";
-import type { AcceptancePayload, DispatchPayload } from "@vbel/domain-delivery";
+import type { AcceptancePayload, DispatchPayload, SettlementPayload } from "@vbel/domain-delivery";
 
-export type DeliveryPayload = DispatchPayload | AcceptancePayload;
+/**
+ * Every payload shape a record in this app can carry. Settlement joined
+ * dispatch and acceptance once payment entered the chain — it is the same
+ * subject (one shipment) seen at the point money moved against it.
+ */
+export type DeliveryPayload = DispatchPayload | AcceptancePayload | SettlementPayload;
 
 export interface LedgerRecord {
   /** Human label for the timeline, e.g. "Acceptance". */
