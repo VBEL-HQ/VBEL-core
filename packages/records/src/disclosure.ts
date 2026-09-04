@@ -2,7 +2,9 @@ import {
   buildDisclosureEnvelope,
   SCHEMA_DISCLOSURE,
   signEnvelope,
+  verifyEvent,
   type DisclosurePayload,
+  type IdentityResolver,
   type KeyPair,
 } from "@vbel/core";
 import { redactChain } from "./recordCodec";
@@ -105,3 +107,66 @@ export async function buildDisclosure(request: DisclosureRequest): Promise<Discl
     withheldEventIds,
   };
 }
+
+export interface CoverSheetReading {
+  /** The cover sheet itself. */
+  disclosure: LedgerRecord;
+  payload: DisclosurePayload;
+  /** The disclosed chain, which is the bundle with the cover sheet removed. */
+  chain: LedgerRecord[];
+  signature: "verified" | "invalid" | "unchecked";
+  /**
+   * Whether the chain delivered alongside the sheet is the version the
+   * sheet names. This is the check that makes the record worth signing: a
+   * sheet that describes a different head is describing a different chain,
+   * and saying so is the whole non-repudiation claim.
+   */
+  headMatches: "matches" | "differs" | "unchecked";
+}
+
+/**
+ * Reads a received bundle as a cover sheet plus the chain it describes.
+ *
+ * Returns null when the bundle carries no disclosure record, which is the
+ * ordinary case for a chain handed to a counterparty rather than disclosed
+ * to a reviewer. That handoff is deliberately not a disclosure and must not
+ * be dressed up as one.
+ */
+export async function readCoverSheet(
+  bundle: LedgerRecord[],
+  resolver?: IdentityResolver
+): Promise<CoverSheetReading | null> {
+  const disclosure = [...bundle].reverse().find((r) => r.event.envelope.schema === SCHEMA_DISCLOSURE);
+  if (!disclosure) return null;
+
+  const payload = disclosure.payload.state === "present" ? (disclosure.payload.stored as DisclosurePayload) : null;
+  const chain = bundle.filter((r) => r.event.envelope.schema !== SCHEMA_DISCLOSURE);
+
+  // A cover sheet whose own payload was withheld says nothing, so nothing is
+  // claimed on its behalf.
+  if (!payload) {
+    return { disclosure, payload: EMPTY_DISCLOSURE, chain, signature: "unchecked", headMatches: "unchecked" };
+  }
+
+  const verified = await verifyEvent(disclosure.event, resolver);
+  const head = chain[chain.length - 1];
+
+  return {
+    disclosure,
+    payload,
+    chain,
+    signature: verified.valid ? "verified" : "invalid",
+    headMatches: !head ? "unchecked" : head.event.eventHash === payload.disclosedHeadHash ? "matches" : "differs",
+  };
+}
+
+const EMPTY_DISCLOSURE: DisclosurePayload = {
+  disclosedSubjectId: "",
+  disclosedHeadHash: `sha256:${"0".repeat(64)}`,
+  revealedEventIds: [],
+  withheldEventIds: [],
+  recipient: "",
+  disclosedBy: "",
+  disclosedAt: new Date(0).toISOString(),
+  inResponseTo: null,
+};
