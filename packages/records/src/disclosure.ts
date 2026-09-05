@@ -1,6 +1,7 @@
 import {
   buildDisclosureEnvelope,
   SCHEMA_DISCLOSURE,
+  SCHEMA_ENTITY_REGISTERED,
   signEnvelope,
   verifyEvent,
   type DisclosurePayload,
@@ -20,6 +21,17 @@ export interface DisclosureRequest {
   /** eventIds whose payloads travel. Everything else keeps its envelope only. */
   revealEventIds: string[];
   inResponseTo?: string | null;
+  /**
+   * Registration records to travel with the bundle, so the recipient can
+   * resolve who signed what without being handed a registry separately and
+   * asked to trust it. They are their own subjects, so they add no link to
+   * the disclosed chain and cannot break it.
+   *
+   * They leak nothing the bundle did not already carry: every issuer named
+   * here already appears as an issuerId on an envelope the recipient is
+   * being given.
+   */
+  includeRegistrations?: LedgerRecord[];
 }
 
 export interface DisclosureBundle {
@@ -61,7 +73,11 @@ export interface DisclosureBundle {
  * because a bundle was passed back in.
  */
 export async function buildDisclosure(request: DisclosureRequest): Promise<DisclosureBundle> {
-  const chain = request.records.filter((r) => r.event.envelope.schema !== SCHEMA_DISCLOSURE);
+  const chain = request.records.filter(
+    (r) =>
+      r.event.envelope.schema !== SCHEMA_DISCLOSURE &&
+      r.event.envelope.schema !== SCHEMA_ENTITY_REGISTERED
+  );
   const head = chain[chain.length - 1];
   if (!head) throw new Error("cannot disclose: there is no chain here");
 
@@ -101,7 +117,7 @@ export async function buildDisclosure(request: DisclosureRequest): Promise<Discl
   };
 
   return {
-    bundle: [...redactChain(chain, revealedEventIds), disclosure],
+    bundle: [...redactChain(chain, revealedEventIds), disclosure, ...(request.includeRegistrations ?? [])],
     disclosure,
     revealedEventIds,
     withheldEventIds,
@@ -140,7 +156,11 @@ export async function readCoverSheet(
   if (!disclosure) return null;
 
   const payload = disclosure.payload.state === "present" ? (disclosure.payload.stored as DisclosurePayload) : null;
-  const chain = bundle.filter((r) => r.event.envelope.schema !== SCHEMA_DISCLOSURE);
+  const chain = bundle.filter(
+    (r) =>
+      r.event.envelope.schema !== SCHEMA_DISCLOSURE &&
+      r.event.envelope.schema !== SCHEMA_ENTITY_REGISTERED
+  );
 
   // A cover sheet whose own payload was withheld says nothing, so nothing is
   // claimed on its behalf.

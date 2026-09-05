@@ -6,7 +6,13 @@
  *
  * Shape: JSON -> gzip (CompressionStream) -> base64url, unpadded.
  */
-import { DisclosurePayloadSchema, SCHEMA_DISCLOSURE, SignedEventSchema } from "@vbel/core";
+import {
+  DisclosurePayloadSchema,
+  EntityRegistrationPayloadSchema,
+  SCHEMA_DISCLOSURE,
+  SCHEMA_ENTITY_REGISTERED,
+  SignedEventSchema,
+} from "@vbel/core";
 import {
   AcceptancePayloadSchema,
   DispatchPayloadSchema,
@@ -52,6 +58,7 @@ const PAYLOAD_SCHEMAS = {
   [SCHEMA_DISPUTE]: DisputePayloadSchema,
   [SCHEMA_RESOLUTION]: ResolutionPayloadSchema,
   [SCHEMA_DISCLOSURE]: DisclosurePayloadSchema,
+  [SCHEMA_ENTITY_REGISTERED]: EntityRegistrationPayloadSchema,
 } as const;
 
 /**

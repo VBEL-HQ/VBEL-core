@@ -1,12 +1,14 @@
 import type {
   AnchorReceipt,
   DisclosurePayload,
+  EntityRegistrationPayload,
   FieldDifference,
   LedgerVerificationResult,
   SignedEvent,
   VerificationIssue,
 } from "@vbel/core";
 import type { AcceptancePayload, DispatchPayload, SettlementPayload } from "@vbel/domain-delivery";
+import type { IdentityDescription } from "./identity";
 import type { PaymentDomainPayload } from "@vbel/domain-payment";
 
 /**
@@ -16,7 +18,8 @@ import type { PaymentDomainPayload } from "@vbel/domain-payment";
  * The delivery domain describes goods moving and settles at the end; the
  * payment domain makes the obligation the subject and treats a delivery,
  * when there is one, as attached evidence; a disclosure is about a chain
- * rather than part of one. They share this type and nothing else — a record
+ * rather than part of one, and a registration is about who signed any of
+ * it. They share this type and nothing else — a record
  * is a record to the verifier regardless of which of them issued it, which
  * is the property that lets one verifier serve all three.
  */
@@ -25,7 +28,8 @@ export type RecordPayload =
   | AcceptancePayload
   | SettlementPayload
   | PaymentDomainPayload
-  | DisclosurePayload;
+  | DisclosurePayload
+  | EntityRegistrationPayload;
 
 /**
  * Whether this record's payload came with the chain.
@@ -125,12 +129,14 @@ export interface RecordVerdict {
   signatureValid: boolean;
   signatureIssues: VerificationIssue[];
   /**
-   * False when no IdentityResolver was supplied. In this app's demo
-   * scenario, checked against a live ENS text record on Sepolia when
-   * ENS_PARENT_NAME is configured, falling back to a small in-memory
-   * registry otherwise — see lib/identity.ts.
+   * Who the signing key belongs to, and on whose word.
+   *
+   * This replaced a boolean that was always true, because it was set from
+   * "a resolver was supplied" rather than from "a resolver answered". An
+   * issuer nobody could resolve therefore reported identity confirmed,
+   * which is the one thing it definitely was not.
    */
-  identityChecked: boolean;
+  identity: IdentityDescription;
   payloadState: PayloadState;
   differences: FieldDifference[];
   counterSigned: boolean;
