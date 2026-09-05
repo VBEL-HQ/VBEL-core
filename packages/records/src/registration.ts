@@ -26,13 +26,15 @@ export async function buildSelfRegistration(params: {
   entityId: string;
   displayName: string;
   role?: string | null;
+  /** When the claim was made. Must predate any act it is expected to explain. */
+  at?: string;
 }): Promise<LedgerRecord> {
   const payload: EntityRegistrationPayload = {
     entityId: params.entityId,
     displayName: params.displayName,
     publicKey: params.keys.publicKeyHex,
     role: params.role ?? null,
-    registeredAt: new Date().toISOString(),
+    registeredAt: params.at ?? new Date().toISOString(),
     validUntil: null,
     attestedBy: null,
   };
