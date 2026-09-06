@@ -104,3 +104,64 @@ export function buildEntityRegistrationEnvelope(params: EntityRegistrationEnvelo
     nonce: crypto.randomUUID(),
   };
 }
+
+
+export interface EntityRevocationParams {
+  /** The claim being withdrawn, unchanged. Revoking does not restate it. */
+  payload: EntityRegistrationPayload;
+  /** eventId of the registration this withdraws. */
+  revokes: string;
+  revokeReason: string;
+  /** Who is withdrawing. Must be whoever made the claim; see honoursRevocation. */
+  issuerId: string;
+  previousEventHash: string;
+  issuedAt?: string;
+  policyId?: string;
+}
+
+/**
+ * Withdrawing an identity claim.
+ *
+ * A claim is withdrawn, never erased. The registration stays in the chain
+ * and keeps verifying, and a later event says it no longer stands, which is
+ * the same rule corrections and disputes follow. An identity that could be
+ * deleted would let a party rewrite who they had been.
+ *
+ * Two things this is for. A key that was lost or rotated, withdrawn by its
+ * owner. And a vouch somebody no longer stands behind, withdrawn by the
+ * voucher: "I said this key was theirs, and I am taking that back."
+ */
+export function buildEntityRevocationEnvelope(params: EntityRevocationParams): Envelope {
+  const payload = EntityRegistrationPayloadSchema.parse(params.payload);
+
+  return {
+    schema: SCHEMA_ENTITY_REGISTERED,
+    eventId: crypto.randomUUID(),
+    subjectId: subjectIdForEntity(payload.entityId),
+    issuerId: params.issuerId,
+    issuedAt: params.issuedAt ?? new Date().toISOString(),
+    previousEventHash: params.previousEventHash,
+    payloadHash: hashPayload(payload),
+    status: "REVOKED",
+    supersedes: null,
+    supersedeReason: null,
+    revokes: params.revokes,
+    revokeReason: params.revokeReason,
+    policyId: params.policyId ?? "urn:vbel:policy:v1",
+    privacy: "off-chain",
+    nonce: crypto.randomUUID(),
+  };
+}
+
+/**
+ * Whether a revocation is one this reader should act on.
+ *
+ * Only the party that made a claim may withdraw it. Without this check any
+ * signer could revoke anybody's registration, which would turn a mechanism
+ * for withdrawing your own word into a mechanism for silencing someone
+ * else's. The signature on the revocation is verified elsewhere, like every
+ * other signature; this decides whether a valid signature is the right one.
+ */
+export function honoursRevocation(revocationIssuerId: string, revokedClaimIssuerId: string): boolean {
+  return revocationIssuerId === revokedClaimIssuerId;
+}

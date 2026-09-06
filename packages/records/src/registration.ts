@@ -1,5 +1,7 @@
 import {
   buildEntityRegistrationEnvelope,
+  buildEntityRevocationEnvelope,
+  honoursRevocation,
   signEnvelope,
   SCHEMA_ENTITY_REGISTERED,
   type EntityRegistrationPayload,
@@ -80,10 +82,79 @@ export async function buildVouch(params: {
   return { label: "Registration", event, payload: disclosedPayload(payload), anchor: null, chainVerification: null };
 }
 
-/** Pulls the registration claims out of a set of records, ignoring everything else. */
+/**
+ * Withdraws a claim, signed by whoever made it.
+ *
+ * The caller has to hand over the key of the original claimant, and readers
+ * check the same thing independently: a revocation naming someone else's
+ * claim is ignored rather than obeyed. Otherwise this would be a way to
+ * silence other people rather than to take back your own word.
+ */
+export async function buildRevocation(params: {
+  keys: KeyPair;
+  /** The claimant withdrawing, which must match the issuer of the target. */
+  issuerId: string;
+  /** The registration record being withdrawn. */
+  target: LedgerRecord;
+  reason: string;
+  /**
+   * Where this hangs in the chain. Defaults to the record being withdrawn,
+   * which is right when it is the head. It usually is not: a vouch sits
+   * under the registration it attests, and appending behind the wrong
+   * record would leave the entity's chain unlinkable.
+   */
+  previousEventHash?: string | null;
+}): Promise<LedgerRecord> {
+  const payload = storedPayloadOf(params.target) as EntityRegistrationPayload | null;
+  if (!payload) throw new Error("cannot withdraw a claim whose contents were not disclosed");
+
+  const event = await signEnvelope({
+    envelope: buildEntityRevocationEnvelope({
+      payload,
+      revokes: params.target.event.envelope.eventId,
+      revokeReason: params.reason,
+      issuerId: params.issuerId,
+      previousEventHash: params.previousEventHash ?? params.target.event.eventHash,
+    }),
+    signer: params.keys,
+    signerId: params.issuerId,
+  });
+
+  return { label: "Withdrawn", event, payload: disclosedPayload(payload), anchor: null, chainVerification: null };
+}
+
+/**
+ * The identity claims that still stand.
+ *
+ * Withdrawn claims are dropped here rather than downstream, so nothing that
+ * resolves an issuer ever sees one. A revocation only counts when the party
+ * withdrawing is the party that made the claim; one naming somebody else's
+ * registration is ignored, because obeying it would let any signer strike
+ * out any identity in the chain.
+ */
+export function standingRegistrations(records: LedgerRecord[]): LedgerRecord[] {
+  const claims = records.filter((r) => r.event.envelope.schema === SCHEMA_ENTITY_REGISTERED);
+  const issuerOf = new Map(claims.map((r) => [r.event.envelope.eventId, r.event.envelope.issuerId]));
+
+  const withdrawn = new Set(
+    claims.flatMap((r) => {
+      const target = r.event.envelope.revokes;
+      if (!target) return [];
+      const claimIssuer = issuerOf.get(target);
+      if (claimIssuer === undefined) return [];
+      return honoursRevocation(r.event.envelope.issuerId, claimIssuer) ? [target] : [];
+    })
+  );
+
+  return claims.filter(
+    (record) =>
+      record.event.envelope.revokes === null && !withdrawn.has(record.event.envelope.eventId)
+  );
+}
+
+/** The same set, as the payloads a resolver reads. */
 export function registrationsIn(records: LedgerRecord[]): EntityRegistrationPayload[] {
-  return records.flatMap((record) => {
-    if (record.event.envelope.schema !== SCHEMA_ENTITY_REGISTERED) return [];
+  return standingRegistrations(records).flatMap((record) => {
     const payload = storedPayloadOf(record);
     return payload ? [payload as EntityRegistrationPayload] : [];
   });
