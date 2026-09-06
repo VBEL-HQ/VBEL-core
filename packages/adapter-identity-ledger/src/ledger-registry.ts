@@ -40,10 +40,20 @@ export class LedgerIdentityRegistry implements IdentityResolver {
   }
 
   /**
-   * A registration somebody else signed outranks one the entity signed for
-   * itself, because self assertion proves only key possession. Between two
-   * of equal standing the later one wins, so re-registering is how an entity
-   * rotates a key rather than a way to accumulate contradictions.
+   * A vouch corroborates a key. It must never introduce one.
+   *
+   * This preferred vouched registrations, on the reasoning that somebody
+   * else's word outranks self assertion. That is true about how much a
+   * binding is worth and false about which key to use, and conflating the
+   * two opened the attack: anyone can sign a registration naming any entity,
+   * so a stranger could vouch for an entity with a key they controlled and
+   * displace the key its actual owner had registered.
+   *
+   * A self asserted registration is signed by the very key it registers, so
+   * it proves possession, which is the one thing resolution needs. Vouches
+   * are reported separately, where a reader can weigh them. Between two of
+   * equal standing the later wins, so re-registering is how an entity
+   * rotates a key.
    */
   async resolve(issuerId: string, at: string): Promise<IssuerAttestation | null> {
     const best = this.best(issuerId, at);
@@ -75,9 +85,11 @@ export class LedgerIdentityRegistry implements IdentityResolver {
     if (candidates.length === 0) return null;
 
     return candidates.reduce((winner, candidate) => {
-      const winnerVouched = assuranceOf(winner) === "vouched";
-      const candidateVouched = assuranceOf(candidate) === "vouched";
-      if (candidateVouched !== winnerVouched) return candidateVouched ? candidate : winner;
+      const winnerProvesPossession = assuranceOf(winner) === "self-asserted";
+      const candidateProvesPossession = assuranceOf(candidate) === "self-asserted";
+      if (candidateProvesPossession !== winnerProvesPossession) {
+        return candidateProvesPossession ? candidate : winner;
+      }
       return Date.parse(candidate.registeredAt) > Date.parse(winner.registeredAt) ? candidate : winner;
     });
   }

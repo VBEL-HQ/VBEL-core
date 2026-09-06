@@ -30,12 +30,23 @@ describe("LedgerIdentityRegistry", () => {
   });
 
   /**
-   * The ranking that carries the whole point. Anyone can sign their own
-   * registration, so a claim somebody else put their name to outranks it.
+   * The attack this closes. Anyone can sign a registration naming any
+   * entity, so if a vouch could decide the key, a stranger would only have
+   * to vouch for Curvy with a key they hold. A self asserted registration is
+   * signed by the key it registers and therefore proves possession, which is
+   * the one thing resolution needs; vouches are weighed separately.
    */
-  it("prefers a vouched registration over a self asserted one", async () => {
+  it("never lets a vouch displace the key its owner registered", async () => {
     const registry = new LedgerIdentityRegistry([
       registration(),
+      registration({ publicKey: KEY_VOUCHED, attestedBy: "urn:vbel:org:supplier-a" }),
+    ]);
+
+    expect((await registry.resolve(CURVY, AT))?.publicKey).toBe(KEY_SELF);
+  });
+
+  it("falls back to a vouched claim only when the entity never registered itself", async () => {
+    const registry = new LedgerIdentityRegistry([
       registration({ publicKey: KEY_VOUCHED, attestedBy: "urn:vbel:org:supplier-a" }),
     ]);
 
