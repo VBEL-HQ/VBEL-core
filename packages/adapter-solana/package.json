@@ -17,9 +17,11 @@
     "test": "vitest run",
     "init:devnet": "tsx scripts/init-devnet-issuer.ts",
     "fund:wallet": "tsx scripts/fund-devnet-wallet.ts",
-    "smoke:anchor": "tsx scripts/smoke-anchor.ts"
+    "smoke:anchor": "tsx scripts/smoke-anchor.ts",
+    "smoke:payment": "tsx scripts/smoke-token-payment.ts"
   },
   "dependencies": {
+    "@solana/spl-token": "^0.4.15",
     "@solana/web3.js": "^1.95.3",
     "@vbel/core": "workspace:*",
     "bs58": "^6.0.0"
