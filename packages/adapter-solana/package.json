@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "init:devnet": "tsx scripts/init-devnet-issuer.ts",
+    "fund:wallet": "tsx scripts/fund-devnet-wallet.ts",
     "smoke:anchor": "tsx scripts/smoke-anchor.ts"
   },
   "dependencies": {
