@@ -2,6 +2,8 @@ export * from "./envelope.js";
 export * from "./canonicalize.js";
 export * from "./hash.js";
 export * from "./keys.js";
+export * from "./signer.js";
+export * from "./message.js";
 export * from "./identity.js";
 export * from "./sign.js";
 export * from "./lifecycle.js";
