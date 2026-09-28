@@ -23,6 +23,8 @@ import {
   SCHEMA_SETTLED,
 } from "@vbel/domain-delivery";
 import {
+  AdvancePayloadSchema,
+  SCHEMA_ADVANCE,
   DisputePayloadSchema,
   ExecutionPayloadSchema,
   IrregularityPayloadSchema,
@@ -55,6 +57,7 @@ const PAYLOAD_SCHEMAS = {
   [SCHEMA_MANDATE]: MandatePayloadSchema,
   [SCHEMA_EXECUTED]: ExecutionPayloadSchema,
   [SCHEMA_REFUND]: RefundPayloadSchema,
+  [SCHEMA_ADVANCE]: AdvancePayloadSchema,
   [SCHEMA_IRREGULARITY]: IrregularityPayloadSchema,
   [SCHEMA_DISPUTE]: DisputePayloadSchema,
   [SCHEMA_RESOLUTION]: ResolutionPayloadSchema,
