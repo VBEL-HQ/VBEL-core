@@ -1,6 +1,6 @@
 /**
  * The chain-neutral contract every ledger adapter implements
- * (TECHNICAL-BRIEF.md §6). Pure types, no I/O — this file is why an adapter
+ * Pure types, no I/O: this file is why an adapter
  * can depend on core without core ever depending back on an adapter.
  */
 

@@ -1,7 +1,7 @@
 import type { SignedEvent } from "./envelope.js";
 
 /**
- * Records are never overwritten or deleted (TECHNICAL-BRIEF.md §4.1). A
+ * Records are never overwritten or deleted. A
  * correction is a new ACTIVE event with `supersedes` set; a revocation is a
  * new REVOKED event with `revokes` set. The status shown for an OLDER event
  * is therefore derived by scanning for later events that reference it — the

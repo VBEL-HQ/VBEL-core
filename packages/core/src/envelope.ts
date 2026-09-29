@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 /**
- * Frozen at v0.1. Must not change during the hackathon — everything else is built on top.
- * See TECHNICAL-BRIEF.md §4.1.
+ * Frozen at v0.1. The envelope is what every hash and signature covers, so
+ * changing a field changes the meaning of every record ever signed with it.
+ * Everything else in this library is built on top of it; a new version is a
+ * new schema URN and a new type, never an edit to this one.
  */
 
 export const EventStatus = z.enum(["ACTIVE", "REVOKED"]);

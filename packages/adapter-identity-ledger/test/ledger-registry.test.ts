@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { EntityRegistrationPayload } from "@vbel/core";
 import { LedgerIdentityRegistry } from "../src/ledger-registry.js";
 
-const CURVY = "urn:vbel:org:curvy";
+const ACME = "urn:vbel:org:acme";
 const KEY_SELF = "aa".repeat(32);
 const KEY_VOUCHED = "bb".repeat(32);
 
 function registration(over: Partial<EntityRegistrationPayload> = {}): EntityRegistrationPayload {
   return {
-    entityId: CURVY,
-    displayName: "Curvy",
+    entityId: ACME,
+    displayName: "Acme Ltd",
     publicKey: KEY_SELF,
     role: null,
     registeredAt: "2026-09-01T00:00:00.000Z",
@@ -25,14 +25,14 @@ describe("LedgerIdentityRegistry", () => {
   it("resolves an entity that registered itself, and says the claim is only self asserted", async () => {
     const registry = new LedgerIdentityRegistry([registration()]);
 
-    expect((await registry.resolve(CURVY, AT))?.publicKey).toBe(KEY_SELF);
-    expect(registry.assuranceFor(CURVY, AT)).toBe("self-asserted");
+    expect((await registry.resolve(ACME, AT))?.publicKey).toBe(KEY_SELF);
+    expect(registry.assuranceFor(ACME, AT)).toBe("self-asserted");
   });
 
   /**
    * The attack this closes. Anyone can sign a registration naming any
    * entity, so if a vouch could decide the key, a stranger would only have
-   * to vouch for Curvy with a key they hold. A self asserted registration is
+   * to vouch for Acme with a key they hold. A self asserted registration is
    * signed by the key it registers and therefore proves possession, which is
    * the one thing resolution needs; vouches are weighed separately.
    */
@@ -42,7 +42,7 @@ describe("LedgerIdentityRegistry", () => {
       registration({ publicKey: KEY_VOUCHED, attestedBy: "urn:vbel:org:supplier-a" }),
     ]);
 
-    expect((await registry.resolve(CURVY, AT))?.publicKey).toBe(KEY_SELF);
+    expect((await registry.resolve(ACME, AT))?.publicKey).toBe(KEY_SELF);
   });
 
   it("falls back to a vouched claim only when the entity never registered itself", async () => {
@@ -50,8 +50,8 @@ describe("LedgerIdentityRegistry", () => {
       registration({ publicKey: KEY_VOUCHED, attestedBy: "urn:vbel:org:supplier-a" }),
     ]);
 
-    expect((await registry.resolve(CURVY, AT))?.publicKey).toBe(KEY_VOUCHED);
-    expect(registry.assuranceFor(CURVY, AT)).toBe("vouched");
+    expect((await registry.resolve(ACME, AT))?.publicKey).toBe(KEY_VOUCHED);
+    expect(registry.assuranceFor(ACME, AT)).toBe("vouched");
   });
 
   it("treats a later registration of equal standing as a key rotation", async () => {
@@ -60,7 +60,7 @@ describe("LedgerIdentityRegistry", () => {
       registration({ publicKey: KEY_VOUCHED, registeredAt: "2026-09-05T00:00:00.000Z" }),
     ]);
 
-    expect((await registry.resolve(CURVY, AT))?.publicKey).toBe(KEY_VOUCHED);
+    expect((await registry.resolve(ACME, AT))?.publicKey).toBe(KEY_VOUCHED);
   });
 
   it("resolves an old event to the key that was current when it was signed", async () => {
@@ -69,8 +69,8 @@ describe("LedgerIdentityRegistry", () => {
       registration({ publicKey: KEY_VOUCHED, registeredAt: "2026-09-05T00:00:00.000Z" }),
     ]);
 
-    expect((await registry.resolve(CURVY, "2026-09-02T00:00:00.000Z"))?.publicKey).toBe(KEY_SELF);
-    expect((await registry.resolve(CURVY, AT))?.publicKey).toBe(KEY_VOUCHED);
+    expect((await registry.resolve(ACME, "2026-09-02T00:00:00.000Z"))?.publicKey).toBe(KEY_SELF);
+    expect((await registry.resolve(ACME, AT))?.publicKey).toBe(KEY_VOUCHED);
   });
 
   it("returns null for an entity it has never seen registered", async () => {
@@ -86,6 +86,6 @@ describe("LedgerIdentityRegistry", () => {
       registration({ entityId: "urn:vbel:org:auditor-a", displayName: "Auditor A" }),
     ]);
 
-    expect(registry.entities().map((e) => e.displayName)).toEqual(["Auditor A", "Curvy"]);
+    expect(registry.entities().map((e) => e.displayName)).toEqual(["Acme Ltd", "Auditor A"]);
   });
 });

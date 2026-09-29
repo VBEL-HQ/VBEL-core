@@ -43,8 +43,8 @@ export type IssuerAttestation = z.infer<typeof IssuerAttestationSchema>;
  * Resolution is time-scoped: an event signed in January must be checked
  * against the key that was valid in January, not against whatever key the
  * issuer rotated to since. Passing `at` rather than reading a clock is what
- * makes a record from years ago still verifiable — which the 10-year
- * retention obligation in TECHNICAL-BRIEF.md §2 requires.
+ * makes a record from years ago still verifiable, which matters wherever
+ * records have to stay checkable for as long as a retention rule says.
  */
 export interface IdentityResolver {
   resolve(issuerId: string, at: string): Promise<IssuerAttestation | null>;

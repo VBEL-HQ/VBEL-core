@@ -52,7 +52,7 @@ export async function verifyEnvelopeSignature(signed: SignedEvent): Promise<bool
 }
 
 /**
- * Counter-signing (TECHNICAL-BRIEF.md §8 decision 1, resolved: counter-sign).
+ * Counter-signing.
  * The counter-signer attests to the event they are chaining to — signed over
  * previousEventHash, not over this event's own eventHash — so the claim is
  * "I have seen and agree with exactly that prior content", independent of

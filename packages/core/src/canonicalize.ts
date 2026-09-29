@@ -4,7 +4,7 @@ export class CanonicalizeError extends Error {}
 
 /**
  * RFC 8785 (JSON Canonicalization Scheme) via json-canonicalize, plus the
- * guards TECHNICAL-BRIEF.md §4.2 calls out: no undefined, no unsafe
+ * guards that keep two implementations byte-identical: no undefined, no unsafe
  * integers, no NaN/Infinity, no lone surrogates. Two implementations of
  * this function, in any language, must produce byte-identical output for
  * the same object or every verification downstream is meaningless.
