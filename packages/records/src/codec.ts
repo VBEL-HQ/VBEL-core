@@ -13,53 +13,23 @@ import {
   SCHEMA_ENTITY_REGISTERED,
   SignedEventSchema,
 } from "@vbel/core";
-import {
-  AcceptancePayloadSchema,
-  DispatchPayloadSchema,
-  SettlementPayloadSchema,
-  SCHEMA_ACCEPTED,
-  SCHEMA_DISPATCHED,
-  SCHEMA_SETTLED,
-} from "@vbel/domain-delivery";
-import {
-  DisputePayloadSchema,
-  ExecutionPayloadSchema,
-  IrregularityPayloadSchema,
-  MandatePayloadSchema,
-  ObligationPayloadSchema,
-  RefundPayloadSchema,
-  ResolutionPayloadSchema,
-  SCHEMA_DISPUTE,
-  SCHEMA_EXECUTED,
-  SCHEMA_IRREGULARITY,
-  SCHEMA_MANDATE,
-  SCHEMA_OBLIGATION,
-  SCHEMA_REFUND,
-  SCHEMA_RESOLUTION,
-} from "@vbel/domain-payment";
-import { disclosedPayload, withheldPayload, type LedgerRecord, type PayloadSlot } from "./types";
+import type { ZodTypeAny } from "zod";
+import { disclosedPayload, withheldPayload, type LedgerRecord, type PayloadSlot } from "./types.js";
 
 /**
- * Every schema this app will decode, and the shape each one must satisfy.
- * A record arriving in a URL is hostile input; an envelope naming a schema
- * that is not in this table is rejected rather than passed through, so a
- * new event type cannot reach the UI until someone has decided what valid
- * looks like for it.
+ * The schemas this library itself knows. Everything else is the caller's:
+ * a record arriving in a URL is hostile input, and an envelope naming a
+ * schema that is in neither this table nor the one passed to `decodeChain`
+ * is rejected rather than passed through, so a new event type cannot reach
+ * a reader until somebody has decided what valid looks like for it.
  */
-const PAYLOAD_SCHEMAS = {
-  [SCHEMA_DISPATCHED]: DispatchPayloadSchema,
-  [SCHEMA_ACCEPTED]: AcceptancePayloadSchema,
-  [SCHEMA_SETTLED]: SettlementPayloadSchema,
-  [SCHEMA_OBLIGATION]: ObligationPayloadSchema,
-  [SCHEMA_MANDATE]: MandatePayloadSchema,
-  [SCHEMA_EXECUTED]: ExecutionPayloadSchema,
-  [SCHEMA_REFUND]: RefundPayloadSchema,
-  [SCHEMA_IRREGULARITY]: IrregularityPayloadSchema,
-  [SCHEMA_DISPUTE]: DisputePayloadSchema,
-  [SCHEMA_RESOLUTION]: ResolutionPayloadSchema,
+const BUILT_IN_SCHEMAS: Record<string, ZodTypeAny> = {
   [SCHEMA_DISCLOSURE]: DisclosurePayloadSchema,
   [SCHEMA_ENTITY_REGISTERED]: EntityRegistrationPayloadSchema,
-} as const;
+};
+
+/** Payload schemas by the schema URN on the envelope. */
+export type PayloadSchemas = Record<string, ZodTypeAny>;
 
 /**
  * Thrown when an encoded chain cannot be decoded into fully valid records.
@@ -213,9 +183,12 @@ export async function encodeChain(records: LedgerRecord[]): Promise<string> {
  * signed payloadHash is what actually detects tampering — so no trust
  * decision may be derived from it here.
  *
+ * `payloadSchemas` are the shapes of your own record types, keyed by the
+ * schema URN on the envelope. They cannot override the built-in ones.
+ *
  * @throws {ChainDecodeError}
  */
-export async function decodeChain(encoded: string): Promise<LedgerRecord[]> {
+export async function decodeChain(encoded: string, payloadSchemas: PayloadSchemas = {}): Promise<LedgerRecord[]> {
   const compressedBytes = base64UrlToBytes(encoded);
   const decompressedBytes = await gzipDecompress(compressedBytes);
 
@@ -262,7 +235,7 @@ export async function decodeChain(encoded: string): Promise<LedgerRecord[]> {
     }
     const event = eventResult.data;
 
-    const payloadSchema = PAYLOAD_SCHEMAS[event.envelope.schema as keyof typeof PAYLOAD_SCHEMAS];
+    const payloadSchema = BUILT_IN_SCHEMAS[event.envelope.schema] ?? payloadSchemas[event.envelope.schema];
     if (!payloadSchema) {
       throw new ChainDecodeError(
         `Record at index ${i} has unrecognized envelope schema "${event.envelope.schema}"`

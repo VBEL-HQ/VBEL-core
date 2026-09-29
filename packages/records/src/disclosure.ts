@@ -8,8 +8,8 @@ import {
   type IdentityResolver,
   type KeyPair,
 } from "@vbel/core";
-import { redactChain } from "./recordCodec";
-import { disclosedPayload, type LedgerRecord } from "./types";
+import { redactChain } from "./codec.js";
+import { disclosedPayload, type LedgerRecord } from "./types.js";
 
 export interface DisclosureRequest {
   /** The chain being shown. Disclosure records already in it are never re-disclosed. */

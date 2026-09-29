@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadSolanaConfig } from "../src/solana.js";
+import { loadSolanaConfig } from "../src/config.js";
 
 describe("loadSolanaConfig", () => {
   it("parses a valid env source into typed config", () => {

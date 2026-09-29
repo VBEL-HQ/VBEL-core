@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
-import type { SolanaConfig } from "@vbel/config";
+import type { SolanaConfig } from "../src/config.js";
 import { MAX_MEMO_BYTES, SolanaMemoAdapter } from "../src/memo-adapter.js";
 
 /**

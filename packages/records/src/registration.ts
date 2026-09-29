@@ -7,7 +7,7 @@ import {
   type EntityRegistrationPayload,
   type KeyPair,
 } from "@vbel/core";
-import { disclosedPayload, storedPayloadOf, type LedgerRecord } from "./types";
+import { disclosedPayload, storedPayloadOf, type LedgerRecord } from "./types.js";
 
 /**
  * Building the two kinds of identity claim, and keeping them apart.

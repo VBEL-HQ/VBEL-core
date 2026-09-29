@@ -7,7 +7,6 @@ export * from "./sign.js";
 export * from "./anchor-auth.js";
 export * from "./lifecycle.js";
 export * from "./ledger.js";
-export * from "./payment.js";
 export * from "./disclosure.js";
 export * from "./registration.js";
 export * from "./payload.js";

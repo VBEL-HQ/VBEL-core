@@ -1,0 +1,20 @@
+{
+  "name": "@vbel/records",
+  "version": "0.0.1",
+  "description": "Records for verifiable business events: a chain with payloads that may be withheld, a link codec, a verdict per record, selective disclosure and identity claims that travel with the chain. Domain-neutral; the schemas of what a record says are yours.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vbel/adapter-identity-ledger": "workspace:*",
+    "@vbel/core": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": { "typescript": "^5.6.0", "vitest": "^2.1.0" }
+}

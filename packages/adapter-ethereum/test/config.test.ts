@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadEthereumConfig } from "../src/ethereum.js";
+import { loadEthereumConfig } from "../src/config.js";
 
 const VALID_KEY = ("0x" + "1".repeat(64)) as `0x${string}`;
 

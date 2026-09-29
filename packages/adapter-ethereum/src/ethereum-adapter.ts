@@ -18,7 +18,7 @@ import type {
   LedgerVerificationResult,
   PublicMetadata,
 } from "@vbel/core";
-import type { EthereumConfig } from "@vbel/config";
+import type { EthereumConfig } from "./config.js";
 
 /**
  * Encodes the event hash and optional public metadata into a JSON string,

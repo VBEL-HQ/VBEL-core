@@ -15,7 +15,7 @@ import type {
   LedgerVerificationResult,
   PublicMetadata,
 } from "@vbel/core";
-import type { SolanaConfig } from "@vbel/config";
+import type { SolanaConfig } from "./config.js";
 
 const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 

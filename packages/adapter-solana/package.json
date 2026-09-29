@@ -1,7 +1,7 @@
 {
   "name": "@vbel/adapter-solana",
   "version": "0.0.1",
-  "description": "LedgerAdapter implementation over the SPL Memo program, Solana devnet. Execution only — config is injected, never read from process.env here.",
+  "description": "LedgerAdapter implementation over the SPL Memo program, Solana devnet. Execution only \u2014 config is injected, never read from process.env here.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,11 +21,11 @@
   "dependencies": {
     "@solana/web3.js": "^1.95.3",
     "@vbel/core": "workspace:*",
-    "bs58": "^6.0.0"
+    "bs58": "^6.0.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",
-    "@vbel/config": "workspace:*",
     "typescript": "^5.6.0",
     "tsx": "^4.19.0",
     "vitest": "^2.1.0"

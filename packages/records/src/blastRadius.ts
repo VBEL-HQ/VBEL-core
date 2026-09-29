@@ -1,4 +1,4 @@
-import type { LedgerRecord, RecordVerdict } from "./types";
+import type { LedgerRecord, RecordVerdict } from "./types.js";
 
 /**
  * A record's own hash and signature can verify perfectly while it still

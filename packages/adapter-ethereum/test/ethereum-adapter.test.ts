@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EthereumConfig } from "@vbel/config";
+import type { EthereumConfig } from "../src/config.js";
 import type { AnchorReceipt } from "@vbel/core";
 import {
   decodeCalldata,

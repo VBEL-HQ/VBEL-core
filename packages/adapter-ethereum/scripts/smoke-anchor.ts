@@ -4,7 +4,7 @@
  *
  * Run: set -a && source .env && set +a && pnpm --filter @vbel/adapter-ethereum smoke:anchor
  */
-import { loadEthereumConfig } from "@vbel/config";
+import { loadEthereumConfig } from "../src/config.js";
 import { hashCanonical } from "@vbel/core";
 import { EthereumLedgerAdapter } from "../src/ethereum-adapter.js";
 

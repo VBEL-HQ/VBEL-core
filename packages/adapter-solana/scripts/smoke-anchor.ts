@@ -4,7 +4,7 @@
  *
  * Run: pnpm --filter @vbel/adapter-solana smoke:anchor
  */
-import { loadSolanaConfig } from "@vbel/config";
+import { loadSolanaConfig } from "../src/config.js";
 import { hashCanonical } from "@vbel/core";
 import { SolanaMemoAdapter } from "../src/memo-adapter.js";
 

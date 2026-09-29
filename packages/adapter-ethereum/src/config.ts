@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv } from "./load.js";
+import { parseEnv } from "./env.js";
 
 export const EthereumEnvSchema = z.object({
   ETHEREUM_RPC_URL: z.string().url(),

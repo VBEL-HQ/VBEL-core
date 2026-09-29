@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv } from "./load.js";
+import { parseEnv } from "./env.js";
 
 export const SolanaEnvSchema = z.object({
   SOLANA_RPC_URL: z.string().url(),

@@ -1,35 +1,24 @@
 import type {
   AnchorReceipt,
-  DisclosurePayload,
-  EntityRegistrationPayload,
   FieldDifference,
   LedgerVerificationResult,
   SignedEvent,
   VerificationIssue,
 } from "@vbel/core";
-import type { AcceptancePayload, DispatchPayload, SettlementPayload } from "@vbel/domain-delivery";
-import type { IdentityDescription } from "./identity";
-import type { PaymentDomainPayload } from "@vbel/domain-payment";
+import type { IdentityDescription } from "./identityContext.js";
 
 /**
- * Every payload shape a record in this app can carry, across both domains
- * plus the disclosure act itself.
+ * What a record says. The library does not know what shapes exist: a payload
+ * is an object, and the schema URN on the envelope says which. A record is a
+ * record to the verifier regardless of which domain issued it, which is the
+ * property that lets one verifier serve every domain. Narrow it where you
+ * know the schema, and register that schema with the codec so a payload
+ * arriving in a link is validated before anything reads it.
  *
- * The delivery domain describes goods moving and settles at the end; the
- * payment domain makes the obligation the subject and treats a delivery,
- * when there is one, as attached evidence; a disclosure is about a chain
- * rather than part of one, and a registration is about who signed any of
- * it. They share this type and nothing else — a record
- * is a record to the verifier regardless of which of them issued it, which
- * is the property that lets one verifier serve all three.
+ * Kept here as a name rather than spelled `object` at every use so the
+ * decision to widen or tighten it later is one line.
  */
-export type RecordPayload =
-  | DispatchPayload
-  | AcceptancePayload
-  | SettlementPayload
-  | PaymentDomainPayload
-  | DisclosurePayload
-  | EntityRegistrationPayload;
+export type RecordPayload = object;
 
 /**
  * Whether this record's payload came with the chain.
