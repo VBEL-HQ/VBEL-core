@@ -1,16 +1,44 @@
 {
   "name": "@vbel/adapter-identity-ledger",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "IdentityResolver over entity registrations carried in the ledger itself, rather than over a file the verifier has to be given separately.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
-  "dependencies": { "@vbel/core": "workspace:*", "zod": "^3.23.8" },
-  "devDependencies": { "typescript": "^5.6.0", "vitest": "^2.1.0" }
+  "dependencies": {
+    "@vbel/core": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "directory": "packages/adapter-identity-ledger"
+  }
 }

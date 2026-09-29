@@ -1,6 +1,6 @@
 {
   "name": "@vbel/adapter-ethereum",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "LedgerAdapter implementation over Ethereum calldata transactions. Execution only \u2014 config is injected, never read from process.env here.",
   "type": "module",
   "main": "./dist/index.js",
@@ -27,5 +27,22 @@
     "typescript": "^5.6.0",
     "tsx": "^4.19.0",
     "vitest": "^2.1.0"
+  },
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "directory": "packages/adapter-ethereum"
   }
 }

@@ -1,0 +1,18 @@
+{
+  "name": "vbel-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Verifiable business event records: signed, hash-chained, checkable in the reader's own browser or process, with optional anchoring on a public chain.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* build",
+    "typecheck": "pnpm -r --filter=./packages/* --filter=./examples/* typecheck",
+    "test": "pnpm -r --filter=./packages/* test",
+    "example": "pnpm --filter verify-in-your-app start"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "packageManager": "pnpm@11.23.0"
+}

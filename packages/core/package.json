@@ -1,6 +1,6 @@
 {
   "name": "@vbel/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Frozen event envelope, RFC 8785 canonicalization, hashing and ed25519 signing. No I/O.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,5 +25,22 @@
   "devDependencies": {
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
+  },
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "directory": "packages/core"
   }
 }
