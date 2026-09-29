@@ -8,46 +8,36 @@ import type {
 import type { IdentityDescription } from "./identityContext.js";
 
 /**
- * What a record says. The library does not know what shapes exist: a payload
- * is an object, and the schema URN on the envelope says which. A record is a
- * record to the verifier regardless of which domain issued it, which is the
- * property that lets one verifier serve every domain. Narrow it where you
- * know the schema, and register that schema with the codec so a payload
- * arriving in a link is validated before anything reads it.
- *
- * Kept here as a name rather than spelled `object` at every use so the
- * decision to widen or tighten it later is one line.
+ * What a record says. The library does not know what shapes exist: a payload is
+ * an object, and the schema URN on the envelope says which. To the verifier a
+ * record is a record whatever domain issued it, so one verifier serves every
+ * domain. Narrow the type where you know the schema, and register that schema
+ * with the codec so a payload arriving in a link is validated before anything
+ * reads it.
  */
 export type RecordPayload = object;
 
 /**
  * Whether this record's payload came with the chain.
  *
- * A withheld record is a different kind of thing from a record with a
- * missing field, and the difference is deliberately expressed as a
- * discriminated union rather than as optional properties. Optional fields
- * would let a withheld payload flow into a hash function or a cast and be
- * silently treated as absent-and-therefore-broken, which is the exact
- * failure this whole change exists to prevent: a correctly redacted chain
- * reading as a forged one.
- *
- * Because the payload is behind a discriminant, `record.storedPayload` no
- * longer exists and the compiler forces every reader to say what it means
- * by absence. That is the point, and it is worth the churn.
+ * A withheld record is a different thing from a record with a missing field, so
+ * it is a discriminated union rather than an optional property. An optional
+ * field would let a withheld payload flow into a hash function or a cast and be
+ * treated as broken, so a correctly redacted chain would read as forged. Behind
+ * a discriminant, the compiler makes every reader say what it means by absence.
  */
 export type PayloadSlot =
   | {
       readonly state: "present";
       /**
-       * What the record store currently holds. Tampering mutates this and
-       * nothing else — the signed event is never touched, which is exactly
-       * why the tampering becomes detectable.
+       * What the holder of the record has. Tampering can change this but not the
+       * signed event, which is why the change is detectable.
        */
       readonly stored: RecordPayload;
       /**
-       * The issuer's own copy, kept only so the UI can name which field
-       * changed. A hash mismatch proves tampering on its own; naming the
-       * field needs a trusted reference, and this is it.
+       * The issuer's own copy, kept only so a reader can name which field
+       * changed. A hash mismatch shows tampering on its own; naming the field
+       * needs a reference copy, and this is it.
        */
       readonly issuer: RecordPayload;
     }
@@ -66,16 +56,15 @@ export function withheldPayload(): PayloadSlot {
 }
 
 export interface LedgerRecord {
-  /** Human label for the timeline, e.g. "Acceptance". */
+  /** Human label for display, e.g. "Acceptance". */
   label: string;
   event: SignedEvent;
   payload: PayloadSlot;
   anchor: AnchorReceipt | null;
   /**
-   * Result of re-fetching the anchor transaction from its chain and
-   * confirming it still carries this event's hash — distinct from `anchor`
-   * being set, which only means the anchor call itself returned a receipt.
-   * Null until that re-check has run.
+   * Result of re-fetching the anchor transaction from its chain and confirming
+   * it carries this event's hash. Distinct from `anchor` being set, which only
+   * means the anchor call returned a receipt. Null until that re-check has run.
    */
   chainVerification: LedgerVerificationResult | null;
 }
@@ -87,11 +76,9 @@ export function isWithheld(record: LedgerRecord): boolean {
 /**
  * The stored payload, or null when it was not disclosed.
  *
- * Collapsing withheld and absent to null is correct for readers that only
- * want to display a business fact: an amount you were not shown and an
- * amount that is not in the chain are equally undisplayable. Readers that
- * must tell the two apart — the verifier, the blast radius, the work queue
- * — check `payload.state` directly instead of calling this.
+ * Collapsing withheld and absent to null suits code that only displays a fact.
+ * Code that must tell the two apart, such as verification and blast radius,
+ * should check `payload.state` directly.
  */
 export function storedPayloadOf(record: LedgerRecord): RecordPayload | null {
   return record.payload.state === "present" ? record.payload.stored : null;
@@ -104,12 +91,11 @@ export function issuerPayloadOf(record: LedgerRecord): RecordPayload | null {
 /**
  * What verification could establish about this record's payload.
  *
- * Three values, not a boolean, because absence is not guilt. `withheld`
- * means the payload was deliberately not disclosed and the record's
- * signature and chain position still verify perfectly. `mismatch` means a
- * payload was supplied and does not hash to what was signed, which is a
- * detected forgery. Rendering or reasoning about them alike accuses whoever
- * performed a lawful redaction.
+ * Three values rather than a boolean, because absence is not guilt. `withheld`
+ * means the payload was not disclosed while the record's signature and chain
+ * position still verify. `mismatch` means a payload was supplied and does not
+ * hash to what was signed, which is a detected change. Treating the two alike
+ * would accuse whoever redacted a chain on purpose.
  */
 export type PayloadState = "verified" | "withheld" | "mismatch";
 
@@ -117,14 +103,7 @@ export interface RecordVerdict {
   /** Envelope hash integrity plus the issuer signature. */
   signatureValid: boolean;
   signatureIssues: VerificationIssue[];
-  /**
-   * Who the signing key belongs to, and on whose word.
-   *
-   * This replaced a boolean that was always true, because it was set from
-   * "a resolver was supplied" rather than from "a resolver answered". An
-   * issuer nobody could resolve therefore reported identity confirmed,
-   * which is the one thing it definitely was not.
-   */
+  /** Who the signing key belongs to, and on whose word. */
   identity: IdentityDescription;
   payloadState: PayloadState;
   differences: FieldDifference[];

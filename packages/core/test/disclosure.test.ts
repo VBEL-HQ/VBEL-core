@@ -83,9 +83,8 @@ describe("a disclosure record alongside the chain it discloses", () => {
   });
 
   /**
-   * The reason each disclosure mints a fresh subject. Sharing one would put
-   * two events on the same subject both naming the head as predecessor,
-   * which is precisely the fork the separate-subject decision avoids.
+   * Why each disclosure mints a fresh subject: sharing one would put two events
+   * on the same subject, both naming the head as predecessor, which is a fork.
    */
   it("stays valid when the same chain is disclosed twice to different recipients", async () => {
     const { keys, chain, head } = await twoRecordChain();
@@ -133,8 +132,8 @@ describe("a disclosure record alongside the chain it discloses", () => {
   });
 
   /**
-   * The constraint the cover sheet's delivery has to respect: a disclosure
-   * verified without the chain it names has a predecessor nobody can find.
+   * The cover sheet has to be delivered with its chain: a disclosure verified
+   * without the chain it names has a predecessor nobody can find.
    */
   it("reports a dangling predecessor when verified without the chain it names", async () => {
     const { keys, head } = await twoRecordChain();

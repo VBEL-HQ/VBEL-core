@@ -1,15 +1,12 @@
 /**
- * Bootstraps a devnet issuer keypair so a teammate can go from a fresh clone
- * to a working anchor. Writes the key into .env at the repo root (gitignored)
- * and then tries to fund it.
+ * Creates a devnet issuer keypair so a fresh clone can anchor. Writes the key
+ * into .env at the repository root (gitignored) and then tries to fund it.
  *
- * The public devnet faucet is aggressively rate-limited and frequently
- * returns 429 or an internal error. When that happens this is not a failure
- * worth debugging — fund the printed address by hand at
- * https://faucet.solana.com (GitHub login, works fine from a phone) and
- * re-run with --check to confirm the balance landed.
+ * The public devnet faucet is rate-limited and often returns 429 or an internal
+ * error. When it does, fund the printed address at https://faucet.solana.com
+ * and re-run with --check to confirm the balance arrived.
  *
- * Devnet only. The key it writes is play money; never reuse it on mainnet.
+ * Devnet only. Never reuse the key it writes on mainnet.
  *
  * Run: pnpm --filter @vbel/adapter-solana init:devnet
  *      pnpm --filter @vbel/adapter-solana init:devnet -- --check
@@ -52,8 +49,8 @@ async function main() {
 
   const connection = new Connection(RPC_URL, "confirmed");
 
-  // Reuse the existing key when there is one, so re-running never orphans a
-  // keypair someone already funded by hand.
+  // Reuse the existing key when there is one, so re-running does not orphan a
+  // keypair that was already funded.
   const existingKey = readExistingKey();
   const keypair = existingKey ? Keypair.fromSecretKey(bs58.decode(existingKey)) : Keypair.generate();
   const address = keypair.publicKey.toBase58();

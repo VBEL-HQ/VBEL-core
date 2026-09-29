@@ -35,15 +35,13 @@ export const EnvelopeSchema = z.object({
 export type Envelope = z.infer<typeof EnvelopeSchema>;
 
 /**
- * A single ed25519 signature: who signed, with what key, producing what bytes.
- * Used both for the issuer's own signature over eventHash, and for a
- * counter-signer's signature over a previousEventHash they are attesting to.
+ * A single ed25519 signature: who signed, with what key, over what bytes.
+ * Used for the issuer's signature over eventHash and for a counter-signer's
+ * signature over the previousEventHash they are attesting to.
  *
  * This block sits outside every hashed region: `computeEventHash` covers the
  * envelope alone, and `attestationSigningRegion` drops the signature before
- * hashing. Adding fields here therefore changes no digest anywhere, which is
- * why a second signing scheme could be introduced without reissuing a single
- * existing record.
+ * hashing. Adding a field here therefore changes no digest.
  */
 export const SignatureBlockSchema = z
   .object({
@@ -51,13 +49,13 @@ export const SignatureBlockSchema = z
     publicKey: z.string().min(1),
     signature: z.string().min(1),
     /**
-     * What bytes the signature is over. `event-hash` is the original: the
-     * digest string itself, signed by code holding a key. `vbel-message-v1`
-     * is the readable text in `message`, whose last line is that digest, for
-     * signatures produced in a wallet where a human reads what they approve.
+     * What bytes the signature is over. `event-hash` signs the digest string
+     * itself, from code holding a key. `vbel-message-v1` signs the readable
+     * text in `message`, whose last line is that digest, so a person reading a
+     * wallet screen knows what they approve.
      *
-     * Defaulted rather than required, so records signed before this existed
-     * and links already in circulation keep verifying byte for byte.
+     * Defaulted rather than required, so a block without it is a digest
+     * signature and its encoding stays minimal.
      */
     scheme: z
       .enum([SIGNATURE_SCHEME_EVENT_HASH, SIGNATURE_SCHEME_MESSAGE_V1])
@@ -91,9 +89,9 @@ export const SignedEventSchema = z.object({
   signature: SignatureBlockSchema,
   /**
    * Present only when this event counter-signs the event it chains to
-   * (envelope.previousEventHash). Signed over previousEventHash, not
-   * over this event's own eventHash — it is an attestation to the prior
-   * content, not a second signature of this one.
+   * (envelope.previousEventHash). Signed over previousEventHash, not over this
+   * event's own eventHash: it attests to the prior content and is not a second
+   * signature of this one.
    */
   counterSignature: SignatureBlockSchema.nullable().default(null),
 });

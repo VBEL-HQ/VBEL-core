@@ -2,19 +2,18 @@ import * as ed25519 from "@noble/ed25519";
 import type { KeyPair } from "./keys.js";
 
 /**
- * Something that can produce an ed25519 signature, without necessarily being
+ * Something that can produce an ed25519 signature without necessarily being
  * able to hand over the key that made it.
  *
- * Until now signing took a `KeyPair`, which assumes the private key is a value
- * this process holds. A wallet never gives that up: it exposes
- * `signMessage(bytes)` and nothing else. Every other party in this system can
- * keep passing a `KeyPair`, so the interface exists to make the one case that
- * cannot possible, not to change the ones that already work.
+ * A `KeyPair` assumes the private key is a value this process holds. A wallet
+ * never gives that up: it exposes `signMessage(bytes)` and nothing else. Code
+ * that holds a key can keep passing a `KeyPair`; this interface exists for the
+ * case that cannot.
  *
- * The contract is deliberately narrow. A signer signs bytes it is handed and
- * reports which public key will verify them. It does not know what an envelope
- * is, what a chain is, or why it is being asked, which is what lets a hardware
- * key, a browser extension and a test fixture all satisfy it.
+ * The contract is deliberately narrow. A signer signs the bytes it is handed
+ * and reports which public key verifies them. It knows nothing of envelopes or
+ * chains, which is what lets a hardware key, a browser extension and a test
+ * fixture all satisfy it.
  */
 export interface Signer {
   /** Hex encoded ed25519 public key, matching `SignatureBlock.publicKey`. */
@@ -31,10 +30,9 @@ export function signerFromKeyPair(keys: KeyPair): Signer {
 }
 
 /**
- * Accepts either form at the call site. A `KeyPair` has no `sign`, which is
- * what distinguishes the two: the check is for the capability rather than for
- * the absence of a private key, so an implementation that happens to hold a
- * key and also signs is treated as the signer it is.
+ * Accepts either form at the call site. It checks for the `sign` capability
+ * rather than for the absence of a private key, so an object that holds a key
+ * and also signs is treated as the signer it is.
  */
 export function normalizeSigner(signer: KeyPair | Signer): Signer {
   return "sign" in signer ? signer : signerFromKeyPair(signer);

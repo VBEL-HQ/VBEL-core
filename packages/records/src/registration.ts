@@ -13,23 +13,19 @@ import { disclosedPayload, storedPayloadOf, type LedgerRecord } from "./types.js
 /**
  * Building the two kinds of identity claim, and keeping them apart.
  *
- * Neither of these is a verification. A registration is somebody saying
- * something, signed, so the saying is attributable. Whether to believe it is
- * the reader's decision, and the UI must never take that decision for them
- * by rendering a self signed registration the way it renders a vouched one.
+ * Neither is a verification. A registration is somebody saying something,
+ * signed, so the saying is attributable. Whether to believe it is the reader's
+ * decision, and a display should not present a self-signed registration the
+ * way it presents a vouched one.
  */
 
 /**
- * An entity claiming its own key. Signed with the key being registered,
- * which proves possession of it and nothing else: the name in it is
- * unverified, and would be unverified if it said Deutsche Bank.
+ * An entity claiming its own key. Signed with the key being registered, which
+ * proves possession of it and nothing else: the name in it is unverified,
+ * whatever it says.
  */
 export async function buildSelfRegistration(params: {
-  /**
-   * A held keypair or a wallet. A financier arrives holding neither an account
-   * here nor a key we issued, so the one party with the most reason to say who
-   * they are was the one party that could not.
-   */
+  /** A held keypair or a wallet. */
   keys: KeyPair | Signer;
   entityId: string;
   displayName: string;
@@ -57,12 +53,11 @@ export async function buildSelfRegistration(params: {
 }
 
 /**
- * One entity vouching for another's key. Signed by the voucher, and worth
- * exactly what the voucher is worth to whoever is reading, which is a
- * question we deliberately do not answer.
+ * One entity vouching for another's key. Signed by the voucher, and worth as
+ * much as the voucher is to whoever reads it, which this library does not judge.
  *
- * It chains to the registration it vouches for when there is one, so the
- * claim and the thing it is about stay linked.
+ * It chains to the registration it vouches for when there is one, so the claim
+ * and the thing it is about stay linked.
  */
 export async function buildVouch(params: {
   keys: KeyPair;
@@ -91,10 +86,10 @@ export async function buildVouch(params: {
 /**
  * Withdraws a claim, signed by whoever made it.
  *
- * The caller has to hand over the key of the original claimant, and readers
- * check the same thing independently: a revocation naming someone else's
- * claim is ignored rather than obeyed. Otherwise this would be a way to
- * silence other people rather than to take back your own word.
+ * The caller has to supply the key of the original claimant, and readers check
+ * the same thing independently: a revocation naming someone else's claim is
+ * ignored. Otherwise it would silence other people instead of retracting your
+ * own word.
  */
 export async function buildRevocation(params: {
   keys: KeyPair;
@@ -104,10 +99,10 @@ export async function buildRevocation(params: {
   target: LedgerRecord;
   reason: string;
   /**
-   * Where this hangs in the chain. Defaults to the record being withdrawn,
-   * which is right when it is the head. It usually is not: a vouch sits
-   * under the registration it attests, and appending behind the wrong
-   * record would leave the entity's chain unlinkable.
+   * Where this attaches in the chain. Defaults to the record being withdrawn,
+   * which is right only when that record is the head. A vouch sits under the
+   * registration it attests, and appending behind the wrong record would leave
+   * the entity's chain unlinkable.
    */
   previousEventHash?: string | null;
 }): Promise<LedgerRecord> {
@@ -132,11 +127,10 @@ export async function buildRevocation(params: {
 /**
  * The identity claims that still stand.
  *
- * Withdrawn claims are dropped here rather than downstream, so nothing that
- * resolves an issuer ever sees one. A revocation only counts when the party
- * withdrawing is the party that made the claim; one naming somebody else's
- * registration is ignored, because obeying it would let any signer strike
- * out any identity in the chain.
+ * Withdrawn claims are dropped here, so nothing that resolves an issuer sees
+ * one. A revocation counts only when the party withdrawing is the party that
+ * made the claim; one naming somebody else's registration is ignored, since
+ * obeying it would let any signer strike out any identity in the chain.
  */
 export function standingRegistrations(records: LedgerRecord[]): LedgerRecord[] {
   const claims = records.filter((r) => r.event.envelope.schema === SCHEMA_ENTITY_REGISTERED);

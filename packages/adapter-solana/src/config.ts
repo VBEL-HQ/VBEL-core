@@ -4,7 +4,7 @@ import { parseEnv } from "./env.js";
 export const SolanaEnvSchema = z.object({
   SOLANA_RPC_URL: z.string().url(),
   SOLANA_NETWORK: z.enum(["devnet", "mainnet-beta"]).default("devnet"),
-  /** Base58-encoded secret key of the issuing keypair. Never committed — see .env.example. */
+  /** Base58-encoded secret key of the issuing keypair. Never committed; see .env.example. */
   SOLANA_ISSUER_SECRET_KEY: z.string().min(1),
 });
 export type SolanaEnv = z.infer<typeof SolanaEnvSchema>;
@@ -16,9 +16,9 @@ export interface SolanaConfig {
 }
 
 /**
- * Call once, at the process entry point (app bootstrap or a CLI script).
- * Execution code (adapters, apps) receives the resulting SolanaConfig as a
- * parameter — it never reads process.env itself.
+ * Call once, at the process entry point (an app's bootstrap or a script).
+ * Everything else receives the resulting SolanaConfig as a parameter and never
+ * reads process.env itself.
  */
 export function loadSolanaConfig(source: NodeJS.ProcessEnv = process.env): SolanaConfig {
   const env = parseEnv(SolanaEnvSchema, source, "Solana");

@@ -4,30 +4,25 @@ import type { Envelope } from "./envelope.js";
 
 /**
  * Registering an entity: the claim that a signing key belongs to a named
- * organisation, recorded the same way every other claim in this system is.
+ * organisation, recorded in the ledger like any other claim.
  *
- * Until now identity was a file we shipped. Every signature verified against
- * it proved only that the resolver we chose to load said so, which is a
- * claim about our configuration rather than about the world. Putting the
- * binding in the ledger does not by itself make it true, and nothing here
- * pretends otherwise. What it changes is that the claim becomes an object
- * with an author, a date and a signature, that a stranger can inspect and
- * decide about, instead of a line in a file only we can see.
+ * Putting the binding in the ledger does not make it true. It makes the claim
+ * an object with an author, a date and a signature that a reader can inspect
+ * and decide about, rather than an entry in a configuration file only the
+ * verifier can see.
  *
- * Two levels, and the difference between them is the whole point:
+ * There are two levels, and the difference between them matters:
  *
- *   self asserted   the entity signs its own registration with the key it
- *                   is registering. This proves possession of the key and
+ *   self asserted   the entity signs its own registration with the key it is
+ *                   registering. This proves possession of the key and
  *                   nothing else. Anyone can generate a keypair and call
  *                   themselves a bank.
- *   vouched         somebody else signs a registration for that entity.
- *                   Worth exactly as much as the voucher is worth, which is
- *                   a question the reader has to answer and we must not
- *                   answer for them.
+ *   vouched         somebody else signs a registration for that entity. It is
+ *                   worth as much as the voucher is, which the reader has to
+ *                   judge.
  *
- * There is no third level where we bless anyone. Somewhere there is always
- * a root that is trusted rather than proven, and being explicit about where
- * it sits is more useful than hiding it behind a checkmark.
+ * There is no third level that blesses anyone. Some root is always trusted
+ * rather than proven, and it is better to be explicit about where it sits.
  */
 
 export const SCHEMA_ENTITY_REGISTERED = "urn:vbel:event:entity-registered:v1";
@@ -45,7 +40,7 @@ export const EntityRegistrationPayloadSchema = z.object({
   /** What to call it on screen. The first fact about an entity a person actually reads. */
   displayName: z.string().min(1),
   publicKey: z.string().regex(publicKeyHex),
-  /** What this entity does in the scenario, e.g. "payee". Free text, never enforced. */
+  /** What this entity does, e.g. "payee". Free text, never enforced. */
   role: z.string().min(1).nullable().default(null),
   registeredAt: z.string().datetime({ offset: true }),
   /** Null means open ended, valid until something supersedes it. */
@@ -79,9 +74,8 @@ export interface EntityRegistrationEnvelopeParams {
 
 /**
  * The issuer is whoever is making the claim: the entity itself when self
- * asserting, the voucher when attesting. That falls out of the same rule
- * every other event follows, and it is what lets a reader see at a glance
- * whose word an identity rests on.
+ * asserting, the voucher when attesting. A reader can therefore see whose word
+ * an identity rests on.
  */
 export function buildEntityRegistrationEnvelope(params: EntityRegistrationEnvelopeParams): Envelope {
   const payload = EntityRegistrationPayloadSchema.parse(params.payload);
@@ -122,14 +116,12 @@ export interface EntityRevocationParams {
 /**
  * Withdrawing an identity claim.
  *
- * A claim is withdrawn, never erased. The registration stays in the chain
- * and keeps verifying, and a later event says it no longer stands, which is
- * the same rule corrections and disputes follow. An identity that could be
- * deleted would let a party rewrite who they had been.
+ * A claim is withdrawn, never erased. The registration stays in the chain and
+ * keeps verifying, and a later event says it no longer stands. An identity that
+ * could be deleted would let a party rewrite who they had been.
  *
- * Two things this is for. A key that was lost or rotated, withdrawn by its
- * owner. And a vouch somebody no longer stands behind, withdrawn by the
- * voucher: "I said this key was theirs, and I am taking that back."
+ * It covers two cases: a key that was lost or rotated, withdrawn by its owner,
+ * and a vouch that somebody no longer stands behind, withdrawn by the voucher.
  */
 export function buildEntityRevocationEnvelope(params: EntityRevocationParams): Envelope {
   const payload = EntityRegistrationPayloadSchema.parse(params.payload);
@@ -154,13 +146,12 @@ export function buildEntityRevocationEnvelope(params: EntityRevocationParams): E
 }
 
 /**
- * Whether a revocation is one this reader should act on.
+ * Whether a revocation is one a reader should act on.
  *
  * Only the party that made a claim may withdraw it. Without this check any
- * signer could revoke anybody's registration, which would turn a mechanism
- * for withdrawing your own word into a mechanism for silencing someone
- * else's. The signature on the revocation is verified elsewhere, like every
- * other signature; this decides whether a valid signature is the right one.
+ * signer could revoke anybody's registration. The signature on the revocation
+ * is verified separately; this decides whether a valid signature is the right
+ * one.
  */
 export function honoursRevocation(revocationIssuerId: string, revokedClaimIssuerId: string): boolean {
   return revocationIssuerId === revokedClaimIssuerId;

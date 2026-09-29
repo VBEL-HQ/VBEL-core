@@ -6,47 +6,41 @@ import { storedPayloadOf, type LedgerRecord } from "./types.js";
 /**
  * The chain, plus the identity claims a recipient needs in order to read it.
  *
- * A chain says who signed each record by name. The name means something only
- * with the claim that binds it to a key, and a recipient opening a link on
- * another device has never met these parties, so the claims of the people who
- * signed have to travel with the chain or every record reads as issued by
- * nobody. They ride behind the chain, in the shape a disclosure bundle uses,
- * and are separated again on arrival so the reader works on the business
- * records and the identity layer works on the claims.
+ * A chain names who signed each record. A name means something only with the
+ * claim that binds it to a key, and a recipient on another device has never met
+ * these parties, so the signers' claims travel with the chain or every record
+ * reads as issued by nobody. They follow the chain in the shape a disclosure
+ * bundle uses and are separated again on arrival, so the reader works on the
+ * business records and the identity layer works on the claims.
  *
- * Attaching all of it does not always fit. Measured on a three-record chain:
+ * Attaching everything does not always fit. Measured on a three-record chain:
  * 1980 characters bare, 2800 with self-registrations, 3443 with vouches as
- * well, against a QR ceiling of 2953. Sealing a vouch's payload saves 28
- * characters, because the weight of a registration is its envelope and
- * signature rather than what it says.
+ * well, against a QR ceiling of 2953. Sealing a vouch's payload saves only 28
+ * characters, because a registration's weight is its envelope and signature.
  *
- * So the split is by what the recipient loses without it.
+ * So claims are included by what the recipient loses without them.
  *
- *   A self-registration is load-bearing. Without it the recipient cannot name
- *   who signed at all. These go in whatever it costs, because a smaller link
- *   that cannot be read is not a better link.
+ *   A self-registration is required. Without it the recipient cannot name who
+ *   signed. These are always included, since a smaller link that cannot be read
+ *   is not better.
  *
  *   A vouch is additional. It tells a reader who else put their name to a
- *   binding, which is worth having and is not what makes the chain legible.
- *   These go in while there is room.
+ *   binding but is not what makes the chain legible. These are included while
+ *   there is room.
  *
- * The budget is therefore a rule rather than a policy: a short chain carries
- * its vouches, a long one does not, and neither case needs a decision made in
- * advance about which matters more.
+ * A short chain therefore carries its vouches and a long one does not, with no
+ * decision needed in advance about which matters more.
  */
 
 export interface Handoff {
   /** The chain as it will travel. */
   handed: LedgerRecord[];
   /**
-   * Identity that did not fit. Returned rather than discarded so the sender
-   * can be told what the recipient will not see, which is the only end where
-   * that is currently knowable.
+   * Identity that did not fit. Returned rather than discarded so the sender can
+   * be told what the recipient will not see; only the sender can know.
    *
    * Known gap: a recipient cannot tell a party nobody vouched for from a party
-   * whose vouch did not fit. Sealing the payload would have said so and costs
-   * almost nothing to carry, which is exactly why it saves almost nothing to
-   * omit.
+   * whose vouch did not fit.
    */
   omitted: LedgerRecord[];
 }
@@ -67,10 +61,9 @@ export function splitHandoff(decoded: LedgerRecord[]): { records: LedgerRecord[]
  * Which claims a chain needs, chosen from `available`, within `budget`
  * characters of encoded link.
  *
- * Only standing claims (a withdrawn vouch is not sent) for parties who
- * actually appear in the chain: sending everything a device has ever been
- * shown would tell a recipient who else this party deals with, which is not
- * theirs to know and not needed to read this chain.
+ * Only standing claims (a withdrawn vouch is not sent) for parties who appear in
+ * the chain. Sending everything a device has been shown would tell a recipient
+ * who else this party deals with, which they do not need to read this chain.
  */
 export async function planHandoff(
   records: LedgerRecord[],
@@ -90,18 +83,13 @@ export async function planHandoff(
   const loadBearing = relevant.filter(isSelfRegistration);
   const additional = relevant.filter((r) => !isSelfRegistration(r));
 
-  /**
-   * Appended, never prepended. The first record decides the subject a chain is
-   * stored and displayed under, and a handoff about an invoice that announced
-   * itself as being about an entity would be filed under the wrong thing at
-   * the other end.
-   */
+  // Appended, never prepended: the first record decides the subject a chain is
+  // stored and displayed under, and the chain's own subject must stay first.
   let handed = [...records, ...loadBearing];
   const omitted: LedgerRecord[] = [];
 
-  // Measured rather than estimated. The encoding is gzip then base64url, so
-  // the cost of one more record depends on how much it repeats of the ones
-  // already there, and no per-record figure predicts it.
+  // Measured rather than estimated: gzip makes the cost of one more record
+  // depend on how much it repeats of the records already there.
   for (const vouch of additional) {
     const candidate = [...handed, vouch];
     if ((await encodeChain(candidate)).length <= budget) handed = candidate;
@@ -130,10 +118,10 @@ function isSelfRegistration(record: LedgerRecord): boolean {
 }
 
 /**
- * Everyone whose key a reader has to resolve: issuers, signers, and
+ * Everyone whose key a reader has to resolve: issuers, signers and
  * counter-signers. A counter-signature is a second party's claim about the
- * record, and a recipient who cannot name them is being shown an endorsement
- * from nobody.
+ * record, and a recipient who cannot name that party sees an endorsement from
+ * nobody.
  */
 function partiesIn(records: LedgerRecord[]): Set<string> {
   const parties = new Set<string>();

@@ -43,7 +43,7 @@ function attestation(overrides: Partial<IssuerAttestation> & { publicKey: string
   };
 }
 
-/** Minimal resolver — the interface is small enough that tests need no mocking library. */
+/** A minimal resolver. The interface is small enough that tests need no mocking library. */
 function resolverFor(attestations: IssuerAttestation[]): IdentityResolver {
   return {
     async resolve(issuerId, at) {
@@ -99,8 +99,8 @@ describe("verifyEvent without a resolver", () => {
       signerId: SUPPLIER,
     });
 
-    // This is the gap the identity layer closes: nothing here is wrong
-    // internally, and without a resolver nothing can say otherwise.
+    // The gap the identity layer closes: nothing here is wrong internally, and
+    // without a resolver nothing can say otherwise.
     const result = await verifyEvent(signed);
     expect(result.valid).toBe(true);
     expect(result.identityChecked).toBe(false);
@@ -191,7 +191,7 @@ describe("verifyEvent with a resolver", () => {
 
     expect((await verifyEvent(signed, resolverFor([attested]))).valid).toBe(true);
 
-    // Widen the validity window without re-signing — the kind of edit a
+    // Widen the validity window without re-signing, the kind of edit a
     // relaying party could attempt on an attestation in transit.
     const altered = { ...attested, validUntil: "2099-01-01T00:00:00.000Z" };
     const result = await verifyEvent(signed, resolverFor([altered]));

@@ -28,9 +28,9 @@ import { normalizeSigner, type Signer } from "./signer.js";
 const utf8 = (s: string) => new TextEncoder().encode(s);
 
 /**
- * The lines every readable message carries, whoever is signing and whatever
- * they were told they were doing. Composed here rather than by the caller so a
- * signer cannot be shown a message that omits which record it binds them to.
+ * The lines every readable message carries, whoever is signing. Composed here
+ * rather than by the caller so a signer cannot be shown a message that omits
+ * which record it binds them to.
  */
 function envelopeContext(envelope: Envelope): MessageEntry[] {
   const context: MessageEntry[] = [
@@ -87,7 +87,7 @@ async function produceSignature(params: {
   };
 }
 
-/** eventHash = sha256(canonicalize(envelope)) — the signature is attached alongside, never inside the hashed region. */
+/** eventHash = sha256(canonicalize(envelope)). The signature sits beside the envelope, never inside the hashed region. */
 export function computeEventHash(envelope: Envelope): string {
   EnvelopeSchema.parse(envelope);
   return hashCanonical(envelope);
@@ -97,9 +97,9 @@ export function computeEventHash(envelope: Envelope): string {
  * The issuer signs their own event. Every event has exactly one of these.
  *
  * `signer` takes a held `KeyPair` or anything satisfying `Signer`, which is how
- * a wallet signs without ever exposing a key. `message` is what turns an opaque
- * digest into a screen a human can read before approving; omit it and the
- * signature is over the digest exactly as it always was.
+ * a wallet signs without exposing a key. `message` turns an opaque digest into
+ * text a person can read before approving; omit it and the signature is over
+ * the digest itself.
  */
 export async function signEnvelope(params: {
   envelope: Envelope;
@@ -127,11 +127,10 @@ export async function verifyEnvelopeSignature(signed: SignedEvent): Promise<bool
 }
 
 /**
- * Counter-signing.
- * The counter-signer attests to the event they are chaining to — signed over
- * previousEventHash, not over this event's own eventHash — so the claim is
- * "I have seen and agree with exactly that prior content", independent of
- * whatever this new event itself goes on to say.
+ * Counter-signing. The counter-signer attests to the event they are chaining
+ * to: the signature is over previousEventHash, not over this event's own
+ * eventHash. The claim is "I have seen and agree with exactly that prior
+ * content", independent of what the new event itself says.
  */
 export async function counterSignPreviousEvent(params: {
   signed: SignedEvent;
@@ -145,11 +144,8 @@ export async function counterSignPreviousEvent(params: {
     throw new Error("cannot counter-sign: envelope.previousEventHash is null");
   }
 
-  /**
-   * The context here describes the event being attested to, not the one
-   * carrying the attestation: a counter-signer is agreeing with prior content,
-   * and a message naming the new event would misstate what they signed.
-   */
+  // The context describes the event being attested to, not the one carrying
+  // the attestation, because that is what the counter-signer is agreeing with.
   const counterSignature = await produceSignature({
     signer: normalizeSigner(params.counterSigner),
     signerId,
@@ -169,9 +165,9 @@ export async function verifyCounterSignature(signed: SignedEvent): Promise<boole
 
 /**
  * Why a signature did not hold. A bad signature and a signature over text that
- * commits to a different record are both failures, and reporting them as one
- * would hide the only case a reader needs to act on differently: the second
- * means somebody was shown one thing and bound to another.
+ * commits to a different record are kept apart because the second means
+ * somebody was shown one thing and bound to another, which a reader has to act
+ * on differently.
  */
 export type SignatureFailure =
   | "SIGNATURE_INVALID"
@@ -179,7 +175,7 @@ export type SignatureFailure =
   | "MESSAGE_MALFORMED"
   | "MESSAGE_DIGEST_MISMATCH";
 
-/** Null when the signature holds. Exported so identity implementations check attestations with the same primitive events use. */
+/** Null when the signature holds. Exported so identity implementations check attestations with the same primitive that events use. */
 export async function checkSignatureBlock(
   committedTo: string,
   block: SignatureBlock
@@ -217,7 +213,7 @@ export function computeAttestationHash(attestation: IssuerAttestation): string {
   return hashCanonical(attestationSigningRegion(attestation));
 }
 
-/** Produces a relayable attestation — one that survives leaving the resolver that issued it. */
+/** Produces a relayable attestation: one that stays verifiable after leaving the resolver that issued it. */
 export async function signAttestation(params: {
   attestation: IssuerAttestation;
   signer: KeyPair | Signer;
@@ -225,11 +221,8 @@ export async function signAttestation(params: {
 }): Promise<IssuerAttestation> {
   const { attestation, signerId } = params;
 
-  /**
-   * Digest scheme only. An attestation is read by resolvers rather than
-   * approved on a screen, so the readable form would add a surface to verify
-   * and nothing for anyone to read.
-   */
+  // Digest scheme only: resolvers read an attestation, nobody approves it on a
+  // screen, so a readable message would add a surface to verify for no reader.
   const signature = await produceSignature({
     signer: normalizeSigner(params.signer),
     signerId,
@@ -242,9 +235,8 @@ export async function signAttestation(params: {
 }
 
 /**
- * Machine-readable outcomes. An auditor consuming this needs to branch on
- * what failed, not parse English — and the string messages here are for
- * humans reading a log, never for code to match on.
+ * Machine-readable outcomes. Branch on the code; the message strings are for
+ * people reading a log and are not a stable interface.
  */
 export type VerificationIssueCode =
   | "SCHEMA_INVALID"
@@ -255,8 +247,8 @@ export type VerificationIssueCode =
   /**
    * The signature is over readable text whose final line names a different
    * record than the one it is attached to, or text that is not a well formed
-   * message at all. Distinct from an invalid signature: the key really did
-   * sign, which means a party was shown one thing and bound to another.
+   * message. Distinct from an invalid signature: the key did sign, so a party
+   * was shown one thing and bound to another.
    */
   | "SIGNED_MESSAGE_MISMATCH"
   | "ISSUER_UNKNOWN"
@@ -275,10 +267,9 @@ export interface VerificationResult {
   valid: boolean;
   issues: VerificationIssue[];
   /**
-   * False when no resolver was supplied. Distinguishing "identity confirmed"
-   * from "identity never checked" matters: without it, a caller reading
-   * `valid: true` would reasonably conclude the issuer is who they claim,
-   * which internal consistency alone never established.
+   * False when no resolver was supplied. Separates "identity confirmed" from
+   * "identity never checked": `valid: true` on its own says the record is
+   * internally consistent, not that the issuer is who they claim.
    */
   identityChecked: boolean;
   /** The attestation identity was checked against, when one was found. */
@@ -287,13 +278,12 @@ export interface VerificationResult {
 
 /**
  * Full verification of one event: hash integrity, issuer signature,
- * counter-signature if present, and — when a resolver is supplied — that the
- * signing key actually belongs to the issuer it claims to be.
+ * counter-signature if present, and, when a resolver is supplied, that the
+ * signing key belongs to the issuer it claims to be.
  *
- * The resolver is optional because verification must keep working with no
- * network and no configuration; that property is what lets anyone check a
- * record without our cooperation. What it costs is that the unresolved case
- * proves less, which `identityChecked` reports rather than hides.
+ * The resolver is optional so verification works with no network and no
+ * configuration. The unresolved case proves less, and `identityChecked`
+ * reports that.
  */
 export async function verifyEvent(
   signed: SignedEvent,
@@ -354,10 +344,7 @@ export async function verifyEvent(
   return { valid: issues.length === 0, issues, identityChecked: resolver !== undefined, attestation };
 }
 
-/**
- * A cryptographic failure and a mismatched message are different findings, so
- * the invalid-signature code is used only when the key genuinely did not sign.
- */
+/** The invalid-signature code is used only when the key did not sign; a mismatched message is a different finding. */
 function signatureIssue(
   failure: SignatureFailure,
   invalidCode: "ISSUER_SIGNATURE_INVALID" | "COUNTER_SIGNATURE_INVALID",
@@ -429,8 +416,8 @@ async function verifyIssuerIdentity(params: {
     });
   }
 
-  // An unsigned attestation is not an error: it means the resolver vouches
-  // directly and trust came from configuring it. See identity.ts.
+  // An unsigned attestation is not an error: the resolver vouches directly and
+  // trust comes from how it was configured. See identity.ts.
   if (attestation.signature) {
     const hash = computeAttestationHash(attestation);
     if (!(await verifySignatureBlock(hash, attestation.signature))) {

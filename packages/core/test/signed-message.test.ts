@@ -40,9 +40,8 @@ const advance = {
 
 describe("records signed before the readable scheme existed", () => {
   /**
-   * The reason this matters more than it looks: chains travel as links, and
-   * links already handed to somebody cannot be reissued. A record with no
-   * `scheme` field has to keep verifying byte for byte.
+   * Chains travel as links, and a link already handed to somebody cannot be
+   * reissued, so a record with no `scheme` field has to keep verifying.
    */
   it("parse to the digest scheme when the field is absent", async () => {
     const keys = await generateKeyPair();

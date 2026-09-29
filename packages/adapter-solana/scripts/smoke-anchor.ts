@@ -1,5 +1,5 @@
 /**
- * Manual smoke test against real Solana devnet — not part of `pnpm test`.
+ * Manual smoke test against Solana devnet. Not part of `pnpm test`.
  * Needs a funded devnet keypair (airdrop via `solana airdrop 1 <pubkey> --url devnet`).
  *
  * Run: pnpm --filter @vbel/adapter-solana smoke:anchor

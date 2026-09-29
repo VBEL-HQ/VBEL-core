@@ -3,11 +3,11 @@ import { canonicalize } from "json-canonicalize";
 export class CanonicalizeError extends Error {}
 
 /**
- * RFC 8785 (JSON Canonicalization Scheme) via json-canonicalize, plus the
- * guards that keep two implementations byte-identical: no undefined, no unsafe
- * integers, no NaN/Infinity, no lone surrogates. Two implementations of
- * this function, in any language, must produce byte-identical output for
- * the same object or every verification downstream is meaningless.
+ * RFC 8785 (JSON Canonicalization Scheme) via json-canonicalize, plus the guards
+ * that keep two implementations byte-identical: no undefined, no unsafe
+ * integers, no NaN/Infinity, no lone surrogates. Any two implementations, in any
+ * language, must produce the same bytes for the same object, or hashes computed
+ * by one cannot be checked by the other.
  */
 export function toCanonicalBytes(value: unknown): Uint8Array {
   assertCanonicalizable(value);

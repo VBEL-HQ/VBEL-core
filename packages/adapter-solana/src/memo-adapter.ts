@@ -22,8 +22,8 @@ const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfc
 /**
  * Conservative estimate of the memo bytes that fit in one legacy Solana
  * transaction (1232-byte limit minus signature, header, account key and
- * blockhash overhead). The cluster is the real enforcer; this is a fast,
- * clear failure before spending an RPC round trip.
+ * blockhash overhead). The cluster enforces the real limit; this fails early and
+ * clearly, before an RPC round trip.
  */
 export const MAX_MEMO_BYTES = 900;
 

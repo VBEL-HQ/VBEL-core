@@ -5,9 +5,9 @@ import type { SolanaConfig } from "../src/config.js";
 import { MAX_MEMO_BYTES, SolanaMemoAdapter } from "../src/memo-adapter.js";
 
 /**
- * No network access in this test file — it only exercises the guard that
- * fails fast before an RPC round trip. Anchoring/verifying against real
- * devnet is scripts/smoke-anchor.ts, run manually with a funded keypair.
+ * No network access here: this only exercises the guard that fails before an
+ * RPC round trip. Anchoring and verifying against devnet is
+ * scripts/smoke-anchor.ts, run manually with a funded keypair.
  */
 function testConfig(): SolanaConfig {
   const kp = Keypair.generate();

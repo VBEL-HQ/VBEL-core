@@ -16,19 +16,17 @@ import {
 } from "../src/wallet-signer.js";
 
 /**
- * The gate this package exists to clear: a Solana key, signing the way a wallet
- * signs, produces a record core accepts.
+ * A Solana key, signing the way a wallet signs, produces a record core accepts.
  *
- * The signature is produced by tweetnacl and verified by @noble, deliberately.
- * A test where one implementation checks its own output proves the arithmetic is
- * self-consistent and nothing about interoperating with a wallet, which is the
- * only risk worth a test here. tweetnacl is also what Phantom's own
- * documentation verifies signatures with, so it is the closest stand-in
- * available without an extension in the room.
+ * The signature is produced by tweetnacl and verified by @noble on purpose. One
+ * implementation checking its own output shows only that the arithmetic is
+ * self-consistent, not that it interoperates with a wallet, which is the risk
+ * this test is for. tweetnacl is also what Phantom's documentation verifies
+ * signatures with, so it is the closest stand-in without a real extension.
  *
- * What stays unproven until a real wallet signs once: whether the extension
- * hands the raw bytes to ed25519 or wraps them in Solana's off-chain message
- * envelope first. No test here can settle that.
+ * What no test here can settle is whether a wallet hands the raw bytes to
+ * ed25519 or first wraps them in Solana's off-chain message envelope. That is
+ * only known by signing once in the real wallet.
  */
 
 /** Exactly what a wallet does: detached ed25519 over the bytes handed in, nothing wrapped around them. */

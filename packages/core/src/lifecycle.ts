@@ -1,12 +1,11 @@
 import type { SignedEvent } from "./envelope.js";
 
 /**
- * Records are never overwritten or deleted. A
- * correction is a new ACTIVE event with `supersedes` set; a revocation is a
- * new REVOKED event with `revokes` set. The status shown for an OLDER event
- * is therefore derived by scanning for later events that reference it — the
- * older event's own envelope never changes, or its hash and signature would
- * break.
+ * Records are never overwritten or deleted. A correction is a new ACTIVE event
+ * with `supersedes` set; a revocation is a new REVOKED event with `revokes`
+ * set. The status of an older event is derived by scanning for later events
+ * that reference it, because its own envelope cannot change without breaking
+ * its hash and signature.
  */
 export type DerivedStatus = "ACTIVE" | "SUPERSEDED" | "REVOKED";
 
@@ -33,9 +32,9 @@ export function deriveStatus(events: SignedEvent[]): Map<string, DerivedStatus> 
 
 /**
  * Structural validation of a set of events: previousEventHash links resolve,
- * supersedes/revokes point at events that exist, and each subject's events
- * form a single hash-linked chain. Does not verify signatures — see
- * verifyEvent in sign.ts for that, kept separate because it's async.
+ * supersedes/revokes point at events that exist, and each subject's events form
+ * a single hash-linked chain. Does not verify signatures; see verifyEvent in
+ * sign.ts, which is async and so kept separate.
  */
 export function validateChain(events: SignedEvent[]): ChainValidationResult {
   const issues: ChainIssue[] = [];

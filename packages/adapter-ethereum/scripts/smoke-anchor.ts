@@ -1,5 +1,5 @@
 /**
- * Manual smoke test against real Ethereum Sepolia testnet — not part of `pnpm test`.
+ * Manual smoke test against the Ethereum Sepolia testnet. Not part of `pnpm test`.
  * Needs a funded Sepolia private key (e.g. from https://www.alchemy.com/faucets/ethereum-sepolia).
  *
  * Run: set -a && source .env && set +a && pnpm --filter @vbel/adapter-ethereum smoke:anchor

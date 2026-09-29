@@ -1,8 +1,7 @@
 /**
- * Serializes a chain of records into a compact, URL-safe string so a signed
- * record can travel between devices as a link, with no server and no
- * database. The URL fragment never reaches a server, which is the same
- * claim the verifier makes: nobody has to be trusted to hold this.
+ * Serializes a chain of records into a compact, URL-safe string, so signed
+ * records can travel between devices as a link with no server and no database.
+ * Put in a URL fragment, it never reaches a server.
  *
  * Shape: JSON -> gzip (CompressionStream) -> base64url, unpadded.
  */
@@ -18,11 +17,11 @@ import type { ZodTypeAny } from "zod";
 import { disclosedPayload, withheldPayload, type LedgerRecord, type PayloadSlot } from "./types.js";
 
 /**
- * The schemas this library itself knows. Everything else is the caller's:
- * a record arriving in a URL is hostile input, and an envelope naming a
- * schema that is in neither this table nor the one passed to `decodeChain`
- * is rejected rather than passed through, so a new event type cannot reach
- * a reader until somebody has decided what valid looks like for it.
+ * The schemas this library itself knows. Everything else is the caller's. A
+ * record arriving in a URL is hostile input, so an envelope naming a schema that
+ * is in neither this table nor the one passed to `decodeChain` is rejected, and
+ * a new event type cannot reach a reader until someone has defined what valid
+ * means for it.
  */
 const BUILT_IN_SCHEMAS: Record<string, ZodTypeAny> = {
   [SCHEMA_DISCLOSURE]: DisclosurePayloadSchema,
@@ -44,39 +43,34 @@ export class ChainDecodeError extends Error {
 }
 
 /**
- * QR byte mode caps out near 2953 bytes at the lowest error correction
- * level. Past it the handoff is copy-link only, with no QR fallback.
+ * QR byte mode caps out near 2953 bytes at the lowest error correction level.
+ * Past it a handoff can only be copied as a link.
  *
- * Measured, not assumed, for the seven-record payment arc (obligation,
- * mandate, drawn payment, irregularity, dispute, resolution, refund):
+ * Measured sizes, in bytes, for a seven-record chain (obligation, mandate,
+ * drawn payment, irregularity, dispute, resolution, refund):
  *
  *   full chain                          3662   over
  *   redacted, one payload revealed      2840   under
  *   redacted, nothing revealed          2670   under
  *   redacted plus its cover sheet       3394   over
  *
- * So redaction does clear the ceiling and the cover sheet puts it back over,
- * and the two cannot be separated: a cover sheet chains to the disclosed
- * head, so verified without that chain it reports a dangling predecessor.
- * QR is therefore available for a redacted chain and not for a disclosure of
- * one, at this size.
+ * Redaction gets under the ceiling and the cover sheet puts it back over, and
+ * the two cannot be separated: a cover sheet chains to the disclosed head, so
+ * verified without that chain it reports a dangling predecessor.
  *
- * The cost is dominated by envelopes rather than payloads, which is why
- * redacting a three-record chain saves only about a sixth: each envelope
- * carries two UUIDs, a 64-character public key and a 128-character
- * signature, all hex. Moving those to base64 is the available win if a
- * disclosure ever has to fit in a QR code.
+ * Envelopes dominate the size rather than payloads. Each carries two UUIDs, a
+ * 64-character public key and a 128-character signature, all hex, so encoding
+ * those as base64 would be the way to fit a disclosure in a QR code.
  */
 export const QR_BYTE_CEILING = 2953;
 
 /**
- * The budget a delivery-only chain is held to. Deliberately under
- * QR_BYTE_CEILING so a scan works on a phone camera at a loading bay rather
- * than only in ideal conditions.
+ * A working budget for a short chain, kept under QR_BYTE_CEILING so a scan works
+ * on a phone camera in poor conditions.
  *
  * Neither number is enforced at encode time. They are budgets to measure
- * against, not limits to fail on, because a chain too large to scan is still
- * a perfectly good chain to send as a link.
+ * against, not limits: a chain too large to scan is still valid to send as a
+ * link.
  */
 export const MAX_ENCODED_LENGTH = 2000;
 
@@ -149,16 +143,16 @@ async function gzipDecompress(bytes: Uint8Array): Promise<Uint8Array> {
 /**
  * Strips every payload except the ones named, keeping every envelope.
  *
- * This is the whole of selective disclosure, and it needed no new
- * cryptography: an envelope commits to its payload by hash and never
- * contains it, so removing payloads leaves every signature verifiable,
- * every previousEventHash link intact, and the ordering provable. Only "what
- * did this record say" goes away, and only for the records left out.
+ * This is all of selective disclosure, and it needs no extra cryptography: an
+ * envelope commits to its payload by hash and never contains it, so removing
+ * payloads leaves every signature verifiable, every previousEventHash link
+ * intact and the ordering provable. Only what the record said is lost, and only
+ * for the records left out.
  *
- * The anchor receipt travels with a withheld record on purpose. It is a
- * transaction on a public chain carrying the eventHash, which is already
- * present in the envelope, so it discloses nothing further and it is what
- * lets a recipient date a record they cannot read.
+ * The anchor receipt stays with a withheld record. It refers to a public
+ * transaction carrying the eventHash, which the envelope already contains, so
+ * it discloses nothing further and lets a recipient date a record they cannot
+ * read.
  */
 export function redactChain(records: LedgerRecord[], revealEventIds: Iterable<string>): LedgerRecord[] {
   const reveal = new Set(revealEventIds);
@@ -176,10 +170,8 @@ export async function encodeChain(records: LedgerRecord[]): Promise<string> {
 
 /**
  * Signature fields holding their defaults are left out, because
- * SignatureBlockSchema puts them back on decode and the length budget here is
- * real. A record signed over a digest therefore encodes exactly as it did
- * before the readable signing scheme existed, and only a record that carries
- * text a signer actually read pays for it.
+ * SignatureBlockSchema restores them on decode and encoded length matters. Only
+ * a record that carries text a signer read pays for the extra fields.
  */
 function forTheWire(record: LedgerRecord): LedgerRecord {
   const { signature, counterSignature } = record.event;
@@ -194,17 +186,16 @@ function forTheWire(record: LedgerRecord): LedgerRecord {
 }
 
 /**
- * Input arrives from a URL a stranger can edit, so it is treated as hostile:
- * every record is validated against SignedEventSchema and the matching
- * payload schema before it is returned.
+ * Input arrives from a URL that anyone can edit, so it is treated as hostile:
+ * every record is validated against SignedEventSchema and the matching payload
+ * schema before it is returned.
  *
- * Note that the issuer copy in a present slot rides along purely so the UI
- * can name which field changed. It is not a security input — the envelope's
- * signed payloadHash is what actually detects tampering — so no trust
- * decision may be derived from it here.
+ * The issuer copy in a present slot travels only so a reader can name which
+ * field changed. It is not a security input, because the envelope's signed
+ * payloadHash is what detects tampering, so no trust decision may rest on it.
  *
- * `payloadSchemas` are the shapes of your own record types, keyed by the
- * schema URN on the envelope. They cannot override the built-in ones.
+ * `payloadSchemas` are the shapes of your own record types, keyed by the schema
+ * URN on the envelope. They cannot override the built-in ones.
  *
  * @throws {ChainDecodeError}
  */
@@ -262,13 +253,10 @@ export async function decodeChain(encoded: string, payloadSchemas: PayloadSchema
       );
     }
 
-    /**
-     * Withheld is a *declared* state, never an inferred one. A record whose
-     * payload is simply missing, or whose slot claims to be present without
-     * one, still throws exactly as before — so a chain stripped in transit
-     * and a chain redacted on purpose are distinguishable at the point of
-     * parsing, and only the second is accepted.
-     */
+    // Withheld is a declared state, never an inferred one. A record whose
+    // payload is missing, or whose slot claims to be present without one, is
+    // rejected, so a chain stripped in transit is told apart from one redacted
+    // on purpose, and only the second is accepted.
     const rawSlot = (raw as { payload?: unknown }).payload;
     if (typeof rawSlot !== "object" || rawSlot === null) {
       throw new ChainDecodeError(`Record at index ${i} has no payload slot`);

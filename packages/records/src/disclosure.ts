@@ -15,7 +15,7 @@ export interface DisclosureRequest {
   /** The chain being shown. Disclosure records already in it are never re-disclosed. */
   records: LedgerRecord[];
   keys: KeyPair;
-  /** The discloser, whose key signs. Split by console, as every other signature is. */
+  /** The discloser, whose key signs. */
   discloserId: string;
   recipient: string;
   /** eventIds whose payloads travel. Everything else keeps its envelope only. */
@@ -23,13 +23,10 @@ export interface DisclosureRequest {
   inResponseTo?: string | null;
   /**
    * Registration records to travel with the bundle, so the recipient can
-   * resolve who signed what without being handed a registry separately and
-   * asked to trust it. They are their own subjects, so they add no link to
-   * the disclosed chain and cannot break it.
-   *
-   * They leak nothing the bundle did not already carry: every issuer named
-   * here already appears as an issuerId on an envelope the recipient is
-   * being given.
+   * resolve who signed what without being handed a registry separately. They
+   * are their own subjects, so they add no link to the disclosed chain and
+   * cannot break it. They reveal nothing new: every issuer named already
+   * appears as an issuerId on an envelope the recipient receives.
    */
   includeRegistrations?: LedgerRecord[];
 }
@@ -43,34 +40,27 @@ export interface DisclosureBundle {
 }
 
 /**
- * Produces what a recipient actually receives: the redacted chain and the
- * signed statement of what was done to it.
+ * Produces what a recipient receives: the redacted chain and the signed
+ * statement of what was done to it.
  *
- * The two travel together and that is a requirement rather than a
- * presentation choice. The cover sheet's `previousEventHash` is the
- * disclosed chain's head, and `validateChain` resolves that link within the
- * events it is handed, so a cover sheet verified alone reports a dangling
+ * The two must travel together. The cover sheet's `previousEventHash` is the
+ * disclosed chain's head, and `validateChain` resolves that link only within
+ * the events it is handed, so a cover sheet verified alone reports a dangling
  * predecessor.
  *
- * Disclosure records already present in `records` are dropped before
- * anything else happens, and this is the enforcement point for the
- * recursion decision rather than a default someone can flip. A later
- * disclosure that carried an earlier one would tell auditor B that auditor
- * A exists, which is a fact about who is being reviewed and by whom, not a
- * fact about the transaction.
+ * Disclosure records already present in `records` are dropped first, always. A
+ * later disclosure that carried an earlier one would tell one reviewer that
+ * another exists, which is a fact about who is being reviewed and by whom
+ * rather than about the transaction.
  *
- * Note that withholding the payload would not be enough to prevent that
- * leak: for a disclosure record the envelope's mere presence is the
- * disclosure. Omitting it entirely is only clean because a disclosure sits
- * on its own subject, so removing it leaves no gap in the disclosed chain's
- * continuity. Had disclosures been appended to the chain, omitting one would
- * have left a visible hole and forced a choice between leaking and looking
- * evasive.
+ * Withholding such a record's payload would not prevent that, since its
+ * envelope alone is the disclosure. Omitting it entirely is clean because a
+ * disclosure sits on its own subject, so removing it leaves no gap in the
+ * disclosed chain's continuity.
  *
- * Including a past disclosure as evidence, to prove to one regulator that
- * you disclosed to their counterpart, stays possible. It is a deliberate act
- * of naming that record in a new disclosure, never something that happens
- * because a bundle was passed back in.
+ * Including a past disclosure as evidence stays possible: name that record
+ * explicitly in a new disclosure. It never happens just because a bundle was
+ * passed back in.
  */
 export async function buildDisclosure(request: DisclosureRequest): Promise<DisclosureBundle> {
   const chain = request.records.filter(
@@ -132,10 +122,9 @@ export interface CoverSheetReading {
   chain: LedgerRecord[];
   signature: "verified" | "invalid" | "unchecked";
   /**
-   * Whether the chain delivered alongside the sheet is the version the
-   * sheet names. This is the check that makes the record worth signing: a
-   * sheet that describes a different head is describing a different chain,
-   * and saying so is the whole non-repudiation claim.
+   * Whether the chain delivered alongside the sheet is the version the sheet
+   * names. A sheet describing a different head describes a different chain, and
+   * this check is what gives the signed record its meaning.
    */
   headMatches: "matches" | "differs" | "unchecked";
 }
@@ -144,9 +133,8 @@ export interface CoverSheetReading {
  * Reads a received bundle as a cover sheet plus the chain it describes.
  *
  * Returns null when the bundle carries no disclosure record, which is the
- * ordinary case for a chain handed to a counterparty rather than disclosed
- * to a reviewer. That handoff is deliberately not a disclosure and must not
- * be dressed up as one.
+ * ordinary case for a chain handed to a counterparty rather than disclosed to
+ * a reviewer. Such a handoff is not a disclosure and is not presented as one.
  */
 export async function readCoverSheet(
   bundle: LedgerRecord[],
@@ -163,7 +151,7 @@ export async function readCoverSheet(
   );
 
   // A cover sheet whose own payload was withheld says nothing, so nothing is
-  // claimed on its behalf.
+  // claimed for it.
   if (!payload) {
     return { disclosure, payload: EMPTY_DISCLOSURE, chain, signature: "unchecked", headMatches: "unchecked" };
   }

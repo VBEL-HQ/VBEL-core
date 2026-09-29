@@ -1,18 +1,17 @@
 import type { LedgerRecord, RecordVerdict } from "./types.js";
 
 /**
- * A record's own hash and signature can verify perfectly while it still
- * depends on a fact currently in dispute — a correction chains to an
- * acceptance by hash, not by re-checking that acceptance's payload every
- * time. This walks forward through previousEventHash and supersedes links
- * from every record whose stored payload no longer matches what was signed,
- * and returns, for each record, which disputed record(s) it descends from.
- * Empty for a record with no disputed ancestor.
+ * A record's own hash and signature can verify while it still depends on a
+ * record whose payload has changed: a later record chains to an earlier one by
+ * hash, without re-checking that record's payload. This walks forward through
+ * previousEventHash and supersedes links from every record whose stored payload
+ * no longer matches what was signed, and returns for each record the disputed
+ * records it descends from. The set is empty for a record with no disputed
+ * ancestor.
  *
- * Seeds from `mismatch` only, never from `withheld`. A withheld payload is
- * a record somebody chose not to show, not a record that failed a check,
- * and seeding from it would mark every descendant of a lawful redaction as
- * contaminated — accusing the discloser of forgery for redacting.
+ * It starts from `mismatch` only, never from `withheld`. A withheld payload is
+ * a record somebody chose not to show, not one that failed a check, and
+ * starting from it would mark every descendant of a redaction as affected.
  */
 export function computeBlastRadius(
   records: LedgerRecord[],

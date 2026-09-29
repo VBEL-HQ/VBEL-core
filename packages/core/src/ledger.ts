@@ -1,7 +1,6 @@
 /**
- * The chain-neutral contract every ledger adapter implements
- * Pure types, no I/O: this file is why an adapter
- * can depend on core without core ever depending back on an adapter.
+ * The chain-neutral contract every ledger adapter implements. Pure types, no
+ * I/O, so an adapter can depend on core without core depending on any adapter.
  */
 
 export type LedgerNetwork =
@@ -18,7 +17,7 @@ export interface AnchorReceipt {
   reference: string;
   /** Slot (Solana) or block number (Ethereum). Null if not yet known. */
   block: string | number | null;
-  /** ISO 8601 — when the adapter observed confirmation, not necessarily block time. */
+  /** ISO 8601 time at which the adapter observed confirmation, not necessarily the block time. */
   timestamp: string;
   /** The eventHash that was anchored, "sha256:<hex>". */
   anchoredHash: string;

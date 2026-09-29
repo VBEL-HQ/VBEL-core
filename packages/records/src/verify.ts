@@ -3,24 +3,10 @@ import type { IdentityContext } from "./identityContext.js";
 import type { LedgerRecord, PayloadState, RecordVerdict } from "./types.js";
 
 /**
- * Runs entirely in the browser against the same @vbel/core the issuing API
- * uses. No server is consulted and no result is taken on trust — that is
- * the point of the verifier. The resolver is optional for the same reason:
- * verification degrades gracefully with no identity source, it doesn't fail.
- *
- * The signature and the chain position are established from the envelope
- * alone, so they hold for every record whether its payload travelled or
- * not. Only "what did this record say" needs a payload, and only for the
- * record it is about — which is the whole reason selective disclosure is
- * possible here without inventing any new cryptography.
- */
-/**
- * Issue codes that are about *who* signed rather than about the signature.
- *
- * verifyEvent returns one list and one boolean, so before this split an
- * unregistered issuer made a record read "signature invalid". The signature
- * was fine. Saying otherwise points a reader at cryptography when the real
- * question is whose key it is, and those get answered by different people.
+ * Issue codes that concern who signed rather than the signature itself.
+ * verifyEvent returns one list of issues, and without this split an
+ * unregistered issuer would make a record read "signature invalid" when the
+ * signature is fine and the open question is whose key it is.
  */
 const IDENTITY_ISSUE_CODES = new Set([
   "ISSUER_UNKNOWN",
@@ -30,6 +16,16 @@ const IDENTITY_ISSUE_CODES = new Set([
   "ATTESTATION_SIGNATURE_INVALID",
 ]);
 
+/**
+ * Verifies one record with no server and no outside call, in any environment
+ * that runs @vbel/core. The identity context is optional in the sense that
+ * verification still works when nobody can say who a key belongs to; the
+ * verdict then reports the identity as unknown.
+ *
+ * The signature and chain position are established from the envelope alone, so
+ * they hold whether or not the payload travelled. Only what a record said needs
+ * its payload, which is why selective disclosure needs no extra cryptography.
+ */
 export async function verifyRecord(record: LedgerRecord, context: IdentityContext): Promise<RecordVerdict> {
   const signature = await verifyEvent(record.event, context.resolver);
   const identity = await context.describe(record.event.envelope.issuerId, record.event.envelope.issuedAt);
@@ -44,8 +40,7 @@ export async function verifyRecord(record: LedgerRecord, context: IdentityContex
   };
 
   // A withheld payload never reaches verifyPayload. Hashing absence would
-  // produce a mismatch, and a mismatch means forgery everywhere downstream
-  // — so the redaction itself would read as the crime.
+  // produce a mismatch, and a redaction would then read as a forgery.
   if (record.payload.state === "withheld") {
     return { ...base, payloadState: "withheld" as PayloadState, differences: [] };
   }

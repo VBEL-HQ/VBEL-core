@@ -10,11 +10,9 @@ export interface PayloadVerification {
 }
 
 /**
- * The envelope commits to a payload it never contains. This is the check
- * that closes that gap: recompute the hash of the stored document and
- * compare it to what was signed. A mismatch means the stored copy was
- * changed after the fact — which is precisely the failure the whole system
- * exists to make visible.
+ * The envelope commits to a payload it never contains. This closes that gap:
+ * recompute the hash of the stored document and compare it to what was signed.
+ * A mismatch means the stored copy was changed after signing.
  */
 export function verifyPayload(payload: unknown, envelope: Envelope): PayloadVerification {
   const actual = hashPayload(payload);
@@ -29,10 +27,9 @@ export interface FieldDifference {
 }
 
 /**
- * Names the fields that differ between two payloads. A hash mismatch alone
- * proves tampering but says nothing about what changed; this answers that,
- * and needs a trusted reference copy to compare against — the hash by
- * itself can never reveal it.
+ * Names the fields that differ between two payloads. A hash mismatch shows that
+ * something changed but not what; this needs a trusted reference copy to compare
+ * against, since a hash alone cannot reveal it.
  */
 export function diffPayloads(expected: unknown, actual: unknown, path = "$"): FieldDifference[] {
   if (Object.is(expected, actual)) return [];

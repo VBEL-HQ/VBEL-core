@@ -6,28 +6,25 @@ import type { Signer } from "@vbel/core";
  *
  * The cryptography needs no bridging: core signs ed25519 over bytes, and a
  * wallet's `signMessage` signs ed25519 over the bytes it is handed. What needs
- * bridging is encoding, and it is the encoding that fails quietly. Three
- * places specifically:
+ * bridging is encoding, which fails quietly in three places:
  *
- *   A Solana public key is base58; `SignatureBlock.publicKey` is 64 lowercase
- *   hex characters, and `registration.ts` enforces that shape. A base58 address
- *   written into that field produces a record that looks signed and verifies
- *   against nothing.
+ *   A Solana public key is base58, while `SignatureBlock.publicKey` is 64
+ *   lowercase hex characters. A base58 address written into that field produces
+ *   a record that looks signed and verifies against nothing.
  *
- *   A `Keypair.secretKey` is 64 bytes, the 32-byte seed followed by the
- *   32-byte public key. ed25519 implementations want the seed alone, so handing
- *   over all 64 bytes yields a valid-looking signature from the wrong key.
+ *   A `Keypair.secretKey` is 64 bytes: the 32-byte seed followed by the 32-byte
+ *   public key. ed25519 implementations want the seed alone, and passing all 64
+ *   bytes yields a valid-looking signature from the wrong key.
  *
  *   A signature is 64 bytes. Anything else means the wallet returned a
- *   different shape than assumed, and failing loudly here beats a verification
- *   error a day later with no clue where it came from.
+ *   different shape than assumed, and failing here beats a verification error
+ *   with no clue where it came from.
  *
- * What this cannot settle: whether a given wallet signs the raw bytes or wraps
- * them first. Solana has a separate off-chain message format that prefixes the
- * payload, and a wallet using it would produce signatures that never verify
- * here. That is a question about one extension's behaviour, answerable only by
- * signing something in it, which is why it is checked against the real wallet
- * rather than asserted in a test.
+ * What this cannot settle is whether a given wallet signs the raw bytes or
+ * wraps them first. Solana has a separate off-chain message format that prefixes
+ * the payload, and a wallet using it would produce signatures that never verify
+ * here. That depends on the wallet and can only be checked by signing something
+ * in it.
  */
 
 const PUBLIC_KEY_BYTES = 32;
@@ -56,9 +53,8 @@ export function base58FromPublicKeyHex(publicKeyHex: string): string {
 }
 
 /**
- * The 32-byte ed25519 seed out of a 64-byte Solana secret key. Exported
- * because every script that loads a keypair from disk needs it, and the slice
- * is the kind of line that gets written from memory and inverted.
+ * The 32-byte ed25519 seed out of a 64-byte Solana secret key. Exported because
+ * anything that loads a keypair needs it, and the slice is easy to get wrong.
  */
 export function seedFromSolanaSecretKey(secretKey: Uint8Array): Uint8Array {
   if (secretKey.length !== 64) {

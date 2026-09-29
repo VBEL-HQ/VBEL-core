@@ -1,34 +1,29 @@
 /**
- * The readable text a signer actually sees, for signatures produced by a
- * wallet rather than by code holding a key.
+ * The readable text a signer sees, for signatures produced by a wallet rather
+ * than by code holding a key.
  *
- * The original scheme signs the digest string itself. That is correct and
- * stays the default, but when the signing surface is a wallet the signer is
- * shown `sha256:8f3a...` and asked to approve it, which is blind signing with
- * extra steps. A product whose whole claim is attributable consent cannot ask
- * for consent to an opaque string.
+ * The original scheme signs the digest string itself. That stays the default,
+ * but a wallet would show the signer `sha256:8f3a...` and ask them to approve
+ * it, which is blind signing. Attributable consent needs text a person can read.
  *
  * Two properties make this safe to put in the record format:
  *
- *   The text is stored verbatim, in `SignatureBlock.message`, and the
- *   signature is verified over the stored text. It is not reconstructed.
- *   Reconstruction would have forced the message to contain only envelope
- *   fields, because under selective disclosure a verifier may hold the
- *   envelope with the payload sealed, and the amount lives in the payload.
- *   Quoting the amount and reconstructing it are mutually exclusive; storing
- *   it keeps both the legible wallet screen and the sealed-payload verifier.
+ *   The text is stored verbatim in `SignatureBlock.message`, and the signature
+ *   is verified over the stored text rather than a reconstruction. Under
+ *   selective disclosure a verifier may hold the envelope with the payload
+ *   sealed, and a reconstructed message could then only contain envelope
+ *   fields. Storing the text lets it quote payload content (an amount, say)
+ *   and still be verified with the payload sealed.
  *
- *   The digest is not merely present in the text, it is the last line, and
- *   verification parses that line rather than searching the text. A frontend
- *   cannot show a signer a flattering digest on one line and quietly commit
- *   them to a different one buried in another, because line breaks are
- *   rejected inside entries and only the final line counts.
+ *   The digest is the last line, and verification parses that line rather than
+ *   searching the text. A frontend cannot show a signer one digest and commit
+ *   them to another buried elsewhere, because line breaks are rejected inside
+ *   entries and only the final line counts.
  *
- * What it still does not prove: that a quoted amount matches the payload the
- * digest commits to. Both are signed by the same party, so a contradiction is
- * attributable rather than deniable, and `contradictedFacts` reports it to
- * anyone holding the payload. The text is what the signer agreed to, never
- * evidence about the payload.
+ * It does not prove that a quoted amount matches the payload the digest commits
+ * to. Both are signed by the same party, so a contradiction is attributable,
+ * and `contradictedFacts` reports it to anyone holding the payload. The text is
+ * what the signer agreed to, not evidence about the payload.
  */
 
 /** Identifies the scheme in `SignatureBlock.scheme`. */
@@ -53,10 +48,9 @@ export interface SigningMessage {
 }
 
 /**
- * What a caller supplies. `commitsTo` is not among the fields because the
- * digest is computed from the envelope by the signing path, never passed in:
- * a caller able to choose it could commit a signer to a record they were not
- * shown.
+ * What a caller supplies. `commitsTo` is absent because the signing path
+ * computes the digest from the envelope. A caller able to choose it could
+ * commit a signer to a record they were not shown.
  */
 export interface SigningMessageRequest {
   action: string;
@@ -124,25 +118,16 @@ export function parseSigningMessage(text: string): SigningMessage | null {
 }
 
 /**
- * Facts the signer was shown that the record itself contradicts. The caller
- * supplies the truth, because only they know which payload fields the labels
- * were meant to quote, and a label with no counterpart in `truth` is not a
- * contradiction: a message may legitimately say more than the payload does.
- */
-/**
- * Drops the fields a decoder restores anyway, for callers that put records on a
- * wire where every character is paid for.
+ * Drops the fields a decoder restores anyway, for records put on a wire where
+ * every character counts.
  *
- * A chain travels as a URL, and the budget for one is real: three records have
- * to stay inside a length a phone camera can scan. Writing `scheme` and
- * `message` when they hold their defaults spends that budget on nothing, and it
- * makes a digest-signed record encode differently than it did before the
- * readable scheme existed, for no gain. Omitting them keeps those records byte
- * identical to the ones already in circulation, so only a record that really
- * carries readable text pays for it.
+ * A chain travels as a URL, and a few records have to stay within a length a
+ * phone camera can scan. Writing `scheme` and `message` at their defaults
+ * spends that budget on nothing, and omitting them keeps digest-signed records
+ * byte-identical to their earlier encoding. Only a record that carries readable
+ * text pays for it.
  *
- * `SignatureBlockSchema` restores both on parse, which is what makes this safe
- * rather than clever.
+ * `SignatureBlockSchema` restores both on parse, which is what makes this safe.
  */
 export function compactSignatureBlock<T extends { scheme: string; message: string | null }>(
   block: T
@@ -153,6 +138,12 @@ export function compactSignatureBlock<T extends { scheme: string; message: strin
   return compact;
 }
 
+/**
+ * Facts the signer was shown that the record itself contradicts. The caller
+ * supplies the truth, because only they know which payload fields the labels
+ * were meant to quote. A label with no counterpart in `truth` is not a
+ * contradiction: a message may say more than the payload does.
+ */
 export function contradictedFacts(
   message: SigningMessage,
   truth: Record<string, string>

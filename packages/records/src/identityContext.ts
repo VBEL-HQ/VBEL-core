@@ -18,14 +18,14 @@ export interface IdentityContextOptions {
 }
 
 /**
- * What a resolved issuer is actually worth, so a reader is never shown a
- * bare tick that hides the difference.
+ * What a resolved issuer is worth, so a reader is never shown a bare tick that
+ * hides the difference.
  *
  *   vouched        another entity signed a registration for this key
- *   self-asserted  the entity signed its own registration, proving key
- *                  possession and nothing about the name
- *   configured     a registry this deployment ships answered, which is a
- *                  claim about our configuration rather than about the world
+ *   self-asserted  the entity signed its own registration, which proves key
+ *                  possession and says nothing about the name
+ *   configured     a registry the verifier configured answered, which is a
+ *                  statement about the verifier's setup rather than the world
  *   unknown        nothing resolved
  */
 export type IdentityAssurance = "vouched" | "self-asserted" | "configured" | "unknown";
@@ -35,15 +35,13 @@ export interface IdentityDescription {
   assurance: IdentityAssurance;
   registration: EntityRegistrationPayload | null;
   /**
-   * Entities that signed a registration for this key, other than the key's
-   * own owner. Reported alongside the resolution rather than replacing it:
-   * anyone can vouch for anyone, so a vouch must never be able to decide
-   * which public key is trusted. What it can do is tell a reader who else
-   * has put their name to this binding, which is a fact they can weigh.
+   * Entities that signed a registration for this key, other than the key's own
+   * owner. Reported alongside the resolution rather than replacing it: anyone
+   * can vouch for anyone, so a vouch must never decide which public key is
+   * trusted. It only tells a reader who else has put their name to the binding.
    *
-   * A vouch only counts when it attests the same key that actually
-   * resolved. One naming a different key is vouching for a different
-   * signer, and counting it would be the whole attack.
+   * A vouch counts only when it attests the key that actually resolved. One
+   * naming a different key vouches for a different signer.
    */
   vouchedBy: string[];
 }
@@ -59,14 +57,12 @@ function defaultNameFor(issuerId: string): string {
 }
 
 /**
- * Builds the trust roots for a reader, in the order they get asked.
+ * Builds the trust roots for a reader, in the order they are asked.
  *
- * The order is a security decision, not a preference. Registrations carried
- * in a chain are asked *last*, because anyone can sign a registration
- * claiming any entityId, and a self asserted claim must never be able to
- * displace a stronger root that already answers for that issuer. Adding a
- * root can only widen who resolves, never narrow it, so the widest and
- * weakest goes at the back.
+ * The order is a security property. Registrations carried in a chain are asked
+ * last, because anyone can sign a registration claiming any entityId, and a
+ * self-asserted claim must never displace a stronger root that already answers
+ * for that issuer.
  */
 export function buildIdentityContext(
   registrations: EntityRegistrationPayload[],

@@ -11,15 +11,14 @@ import {
  * Resolves issuers from registration records the reader already holds.
  *
  * The difference from a static registry is who has to be trusted. A file
- * registry answers because we configured it; this answers because somebody
- * signed a claim that travelled with the chain, and the reader can see who
- * that somebody was. It does not make the claim true. It makes the claim
- * inspectable, which is the most a verifier that consults nobody can offer.
+ * registry answers because the verifier configured it; this answers because
+ * somebody signed a claim that travelled with the chain, and the reader can see
+ * who that was. It does not make the claim true, only inspectable, which is the
+ * most a verifier that consults nobody can offer.
  *
- * Registrations arrive the same way everything else does, inside a chain,
- * so this deliberately takes payloads rather than fetching anything. A
- * resolver that reached out to a server would put a network dependency in
- * the middle of the one operation this product promises works offline.
+ * Registrations arrive inside a chain like everything else, so this takes
+ * payloads and fetches nothing. A resolver that called a server would add a
+ * network dependency to an operation that should work offline.
  */
 export class LedgerIdentityRegistry implements IdentityResolver {
   private readonly byEntity = new Map<string, EntityRegistrationPayload[]>();
@@ -42,25 +41,23 @@ export class LedgerIdentityRegistry implements IdentityResolver {
   /**
    * A vouch corroborates a key. It must never introduce one.
    *
-   * This preferred vouched registrations, on the reasoning that somebody
-   * else's word outranks self assertion. That is true about how much a
-   * binding is worth and false about which key to use, and conflating the
-   * two opened the attack: anyone can sign a registration naming any entity,
-   * so a stranger could vouch for an entity with a key they controlled and
-   * displace the key its actual owner had registered.
+   * Preferring vouched registrations would be wrong. Somebody else's word does
+   * raise what a binding is worth, but it does not decide which key to use, and
+   * anyone can sign a registration naming any entity. A stranger could vouch
+   * for an entity with a key they control and displace the key its owner
+   * registered.
    *
-   * A self asserted registration is signed by the very key it registers, so
-   * it proves possession, which is the one thing resolution needs. Vouches
-   * are reported separately, where a reader can weigh them. Between two of
-   * equal standing the later wins, so re-registering is how an entity
-   * rotates a key.
+   * A self-asserted registration is signed by the very key it registers, so it
+   * proves possession, which is all resolution needs. Vouches are reported
+   * separately, where a reader can weigh them. Between two of equal standing
+   * the later wins, so re-registering is how an entity rotates a key.
    */
   async resolve(issuerId: string, at: string): Promise<IssuerAttestation | null> {
     const best = this.best(issuerId, at);
     return best ? toAttestation(best) : null;
   }
 
-  /** What the resolved identity is actually worth. Null when nothing resolved. */
+  /** What the resolved identity is worth. Null when nothing resolved. */
   assuranceFor(issuerId: string, at: string): Assurance | null {
     const best = this.best(issuerId, at);
     return best ? assuranceOf(best) : null;
@@ -102,9 +99,9 @@ function toAttestation(registration: EntityRegistrationPayload): IssuerAttestati
     attestedBy: registration.attestedBy ?? registration.entityId,
     validFrom: registration.registeredAt,
     validUntil: registration.validUntil,
-    // The signature that matters is the envelope's, over the whole
-    // registration event, and it is checked by verifyEvent like any other.
-    // Duplicating it here would invite someone to check the weaker copy.
+    // The signature that matters is the envelope's, over the whole registration
+    // event, and verifyEvent checks it like any other. It is not repeated here,
+    // so nobody checks a weaker copy.
     signature: null,
   };
 }
