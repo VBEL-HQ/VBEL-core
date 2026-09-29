@@ -6,6 +6,7 @@ import {
   SCHEMA_ENTITY_REGISTERED,
   type EntityRegistrationPayload,
   type KeyPair,
+  type Signer,
 } from "@vbel/core";
 import { disclosedPayload, storedPayloadOf, type LedgerRecord } from "./types.js";
 
@@ -24,7 +25,12 @@ import { disclosedPayload, storedPayloadOf, type LedgerRecord } from "./types.js
  * unverified, and would be unverified if it said Deutsche Bank.
  */
 export async function buildSelfRegistration(params: {
-  keys: KeyPair;
+  /**
+   * A held keypair or a wallet. A financier arrives holding neither an account
+   * here nor a key we issued, so the one party with the most reason to say who
+   * they are was the one party that could not.
+   */
+  keys: KeyPair | Signer;
   entityId: string;
   displayName: string;
   role?: string | null;

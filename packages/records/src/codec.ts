@@ -7,6 +7,7 @@
  * Shape: JSON -> gzip (CompressionStream) -> base64url, unpadded.
  */
 import {
+  compactSignatureBlock,
   DisclosurePayloadSchema,
   EntityRegistrationPayloadSchema,
   SCHEMA_DISCLOSURE,
@@ -167,10 +168,29 @@ export function redactChain(records: LedgerRecord[], revealEventIds: Iterable<st
 }
 
 export async function encodeChain(records: LedgerRecord[]): Promise<string> {
-  const json = JSON.stringify(records);
+  const json = JSON.stringify(records.map(forTheWire));
   const jsonBytes = new TextEncoder().encode(json);
   const compressed = await gzipCompress(jsonBytes);
   return bytesToBase64Url(compressed);
+}
+
+/**
+ * Signature fields holding their defaults are left out, because
+ * SignatureBlockSchema puts them back on decode and the length budget here is
+ * real. A record signed over a digest therefore encodes exactly as it did
+ * before the readable signing scheme existed, and only a record that carries
+ * text a signer actually read pays for it.
+ */
+function forTheWire(record: LedgerRecord): LedgerRecord {
+  const { signature, counterSignature } = record.event;
+  return {
+    ...record,
+    event: {
+      ...record.event,
+      signature: compactSignatureBlock(signature),
+      counterSignature: counterSignature === null ? null : compactSignatureBlock(counterSignature),
+    },
+  } as LedgerRecord;
 }
 
 /**

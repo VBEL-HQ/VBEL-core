@@ -14,7 +14,7 @@ import {
   isWithheld,
   readCoverSheet,
   redactChain,
-  registrationsForSigners,
+  planHandoff,
   registrationsIn,
   splitHandoff,
   standingRegistrations,
@@ -188,13 +188,49 @@ describe("identity claims", () => {
       entityId: "urn:vbel:org:bystander",
       displayName: "Bystander",
     });
-    const claims = registrationsForSigners(records, [registration, bystander]);
-    expect(ids(claims)).toEqual(ids([registration]));
+    const { handed, omitted } = await planHandoff(records, [registration, bystander]);
+    expect(ids(handed)).toEqual(ids([...records, registration]));
+    expect(omitted).toEqual([]);
 
     const link = await encodeWithIdentity(records, [registration, bystander]);
     const { records: business, registrations } = splitHandoff(await decodeChain(link, SCHEMAS));
     expect(business).toHaveLength(3);
     expect(ids(registrations)).toEqual(ids([registration]));
+  });
+});
+
+describe("handoff budget", () => {
+  it("keeps the claim without which nobody can be named, and drops a vouch that does not fit", async () => {
+    const { records, registration } = await chainOfThree();
+    const notary = await generateKeyPair();
+    const vouch = await buildVouch({
+      keys: notary,
+      voucherId: "urn:vbel:org:notary",
+      subject: storedPayloadOf(registration) as never,
+      previousEventHash: registration.event.eventHash,
+    });
+
+    const roomy = await planHandoff(records, [registration, vouch]);
+    expect(ids(roomy.handed)).toEqual(ids([...records, registration, vouch]));
+
+    const withoutVouch = (await encodeChain([...records, registration])).length;
+    const tight = await planHandoff(records, [registration, vouch], withoutVouch);
+    expect(ids(tight.handed)).toEqual(ids([...records, registration]));
+    expect(ids(tight.omitted)).toEqual(ids([vouch]));
+  });
+
+  it("never sends a withdrawn vouch", async () => {
+    const { records, registration } = await chainOfThree();
+    const notary = await generateKeyPair();
+    const vouch = await buildVouch({
+      keys: notary,
+      voucherId: "urn:vbel:org:notary",
+      subject: storedPayloadOf(registration) as never,
+      previousEventHash: registration.event.eventHash,
+    });
+    const withdrawal = await buildRevocation({ keys: notary, issuerId: "urn:vbel:org:notary", target: vouch, reason: "no" });
+    const { handed } = await planHandoff(records, [registration, vouch, withdrawal]);
+    expect(ids(handed)).not.toContain(vouch.event.envelope.eventId);
   });
 });
 
