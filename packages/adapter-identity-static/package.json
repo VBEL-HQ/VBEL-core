@@ -40,6 +40,11 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
+    "url": "git+https://github.com/VBEL-HQ/VBEL-core.git",
     "directory": "packages/adapter-identity-static"
+  },
+  "homepage": "https://github.com/VBEL-HQ/VBEL-core/tree/main/packages/adapter-identity-static#readme",
+  "bugs": {
+    "url": "https://github.com/VBEL-HQ/VBEL-core/issues"
   }
 }

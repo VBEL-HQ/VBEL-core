@@ -43,6 +43,11 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
+    "url": "git+https://github.com/VBEL-HQ/VBEL-core.git",
     "directory": "packages/adapter-ethereum"
+  },
+  "homepage": "https://github.com/VBEL-HQ/VBEL-core/tree/main/packages/adapter-ethereum#readme",
+  "bugs": {
+    "url": "https://github.com/VBEL-HQ/VBEL-core/issues"
   }
 }

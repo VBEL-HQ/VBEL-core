@@ -41,6 +41,11 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
+    "url": "git+https://github.com/VBEL-HQ/VBEL-core.git",
     "directory": "packages/core"
+  },
+  "homepage": "https://github.com/VBEL-HQ/VBEL-core/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/VBEL-HQ/VBEL-core/issues"
   }
 }

@@ -46,6 +46,11 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
+    "url": "git+https://github.com/VBEL-HQ/VBEL-core.git",
     "directory": "packages/adapter-solana"
+  },
+  "homepage": "https://github.com/VBEL-HQ/VBEL-core/tree/main/packages/adapter-solana#readme",
+  "bugs": {
+    "url": "https://github.com/VBEL-HQ/VBEL-core/issues"
   }
 }
