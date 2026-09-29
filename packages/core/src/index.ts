@@ -4,6 +4,7 @@ export * from "./hash.js";
 export * from "./keys.js";
 export * from "./identity.js";
 export * from "./sign.js";
+export * from "./anchor-auth.js";
 export * from "./lifecycle.js";
 export * from "./ledger.js";
 export * from "./payment.js";
