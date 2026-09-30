@@ -90,6 +90,27 @@ describe("verification", () => {
     expect(verdict.identity.assurance).toBe("unknown");
   });
 
+  it("never names a company for a record signed by a key other than the one that resolves", async () => {
+    const { records, registration } = await chainOfThree();
+    const stranger = await generateKeyPair();
+    const later = await buildSelfRegistration({
+      keys: stranger,
+      entityId: AUTHOR,
+      displayName: "The Author Ltd",
+      // After the author's own registration and before the records were signed,
+      // which is all it takes to be the one that resolves: the later of two
+      // self registrations wins, because that is how a key is rotated.
+      at: "2026-08-05T00:00:00.000Z",
+    });
+    const context = buildIdentityContext(registrationsIn([registration, later]));
+    expect((await context.resolver.resolve(AUTHOR, records[0]!.event.envelope.issuedAt))?.publicKey).toBe(stranger.publicKeyHex);
+
+    const verdict = await verifyRecord(records[0]!, context);
+    expect(verdict.signatureValid).toBe(true);
+    expect(verdict.identity.assurance).toBe("unknown");
+    expect(verdict.identity.registration).toBeNull();
+  });
+
   it("detects an edited payload and says which field", async () => {
     const { records, registration } = await chainOfThree();
     const first = records[0]!;
