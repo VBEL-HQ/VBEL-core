@@ -17,17 +17,29 @@ export function computeBlastRadius(
   records: LedgerRecord[],
   verdicts: Map<string, RecordVerdict>
 ): Map<string, Set<string>> {
-  const disputedIds = new Set(
-    records
-      .filter((r) => verdicts.get(r.event.envelope.eventId)?.payloadState === "mismatch")
-      .map((r) => r.event.envelope.eventId)
-  );
+  const disputedIds = new Set<string>();
+  const byEventHash = new Map<string, LedgerRecord>();
+  const contaminatedBy = new Map<string, Set<string>>();
 
-  const byEventHash = new Map(records.map((r) => [r.event.eventHash, r]));
+  for (const r of records) {
+    const id = r.event.envelope.eventId;
+    contaminatedBy.set(id, new Set());
+    byEventHash.set(r.event.eventHash, r);
+    if (verdicts.get(id)?.payloadState === "mismatch") {
+      disputedIds.add(id);
+    }
+  }
+
   const childrenOf = new Map<string, LedgerRecord[]>();
   const addChild = (parentId: string, child: LedgerRecord) => {
-    childrenOf.set(parentId, [...(childrenOf.get(parentId) ?? []), child]);
+    let children = childrenOf.get(parentId);
+    if (!children) {
+      children = [];
+      childrenOf.set(parentId, children);
+    }
+    children.push(child);
   };
+
   for (const r of records) {
     const prevHash = r.event.envelope.previousEventHash;
     const parent = prevHash ? byEventHash.get(prevHash) : undefined;
@@ -37,19 +49,24 @@ export function computeBlastRadius(
     if (supersedesId) addChild(supersedesId, r);
   }
 
-  const contaminatedBy = new Map<string, Set<string>>();
-  for (const r of records) contaminatedBy.set(r.event.envelope.eventId, new Set());
-
   for (const disputedId of disputedIds) {
-    const queue = [...(childrenOf.get(disputedId) ?? [])];
+    const children = childrenOf.get(disputedId);
+    if (!children || children.length === 0) continue;
+    const queue = [...children];
     const visited = new Set<string>();
-    while (queue.length > 0) {
-      const record = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const record = queue[head++]!;
       const id = record.event.envelope.eventId;
       if (visited.has(id)) continue;
       visited.add(id);
       contaminatedBy.get(id)!.add(disputedId);
-      for (const child of childrenOf.get(id) ?? []) queue.push(child);
+      const nextChildren = childrenOf.get(id);
+      if (nextChildren) {
+        for (let i = 0; i < nextChildren.length; i++) {
+          queue.push(nextChildren[i]!);
+        }
+      }
     }
   }
 
