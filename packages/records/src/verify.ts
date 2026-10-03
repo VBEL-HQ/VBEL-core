@@ -28,9 +28,22 @@ const IDENTITY_ISSUE_CODES = new Set([
  */
 export async function verifyRecord(record: LedgerRecord, context: IdentityContext): Promise<RecordVerdict> {
   const signature = await verifyEvent(record.event, context.resolver);
-  const identity = await context.describe(record.event.envelope.issuerId, record.event.envelope.issuedAt);
+  const described = await context.describe(record.event.envelope.issuerId, record.event.envelope.issuedAt);
 
   const signatureIssues = signature.issues.filter((issue) => !IDENTITY_ISSUE_CODES.has(issue.code));
+
+  /**
+   * Splitting identity out of the signature must not lose it. The resolver can
+   * answer for this issuer with a key other than the one that signed: anyone
+   * can sign a registration for any name, and a later one can be the one that
+   * resolves. The signature is then valid and the name is somebody else's, so
+   * the record reads as signed by a key nobody is known to hold, never as
+   * the named company's.
+   */
+  const keyMismatch = signature.issues.some((issue) => issue.code === "ISSUER_KEY_MISMATCH");
+  const identity = keyMismatch
+    ? { ...described, assurance: "unknown" as const, registration: null, vouchedBy: [] }
+    : described;
 
   const base = {
     signatureValid: signatureIssues.length === 0,

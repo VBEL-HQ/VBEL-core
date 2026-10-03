@@ -1,6 +1,6 @@
 {
   "name": "@vbel/records",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Records for verifiable business events: a chain with payloads that may be withheld, a link codec, a verdict per record, selective disclosure and identity claims that travel with the chain. Domain-neutral; the schemas of what a record says are yours.",
   "type": "module",
   "main": "./dist/index.js",
