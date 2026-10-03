@@ -11,6 +11,20 @@ whoever did it and chained to the one before. A later edit is provable instead o
 reader who trusts neither company can check the whole record in their own process or browser. No
 server holds the chain and there is no account: the records travel as a link.
 
+## What a check tells you
+
+| It proves | It does not prove |
+|---|---|
+| The record was **not changed** since it was signed | That what it says is **true** |
+| It came **in this order**, from **this key** | That goods arrived, or that a claim is legally enforceable |
+| Optionally, that it **existed by a given time** on a public chain | That an invoice was not financed elsewhere |
+
+- A name in an identity claim is only as trustworthy as whoever wrote it. It is reported as
+  `self-asserted`, never as verified.
+- Withheld evidence is reported as **withheld**, never as a clean bill of health.
+
+VBEL is not a qualified electronic ledger under eIDAS 2.0, and not a compliance product.
+
 ## What a check looks like
 
 The reader holds nothing of the signer's. They decode the link and ask for a verdict per record:
@@ -52,18 +66,17 @@ check names the field; after a record is withheld, it says so and does not call 
 
 ## Packages
 
-| Package | What it gives you | Source |
-|---|---|---|
-| [`@vbel/core`](packages/core) | The event envelope (frozen at v0.1), RFC 8785 canonical JSON, SHA-256 hashing, ed25519 signing and counter-signing, chain validation, identity and registration primitives, anchoring authorisation. No I/O. | [`packages/core/src`](packages/core/src) |
-| [`@vbel/records`](packages/records) | What makes core usable in an application: a chain whose payloads may be withheld, a link codec, a verdict per record, selective disclosure with a signed cover sheet, identity claims that travel with the chain. Domain-neutral. | [`packages/records/src`](packages/records/src) |
-| [`@vbel/adapter-solana`](packages/adapter-solana) | Anchors a record's hash on Solana through the SPL Memo program, and turns a Solana wallet into a signer. | [`packages/adapter-solana/src`](packages/adapter-solana/src) |
-| [`@vbel/adapter-ethereum`](packages/adapter-ethereum) | Anchors a hash in the calldata of a zero-value transaction on an EVM chain. | [`packages/adapter-ethereum/src`](packages/adapter-ethereum/src) |
-| [`@vbel/adapter-identity-ledger`](packages/adapter-identity-ledger) | Resolves who a key belongs to from registration records carried in the chain itself. | [`packages/adapter-identity-ledger/src`](packages/adapter-identity-ledger/src) |
-| [`@vbel/adapter-identity-static`](packages/adapter-identity-static) | Resolves keys from an explicit list that a verifier chooses to trust. | [`packages/adapter-identity-static/src`](packages/adapter-identity-static/src) |
+| Package | One line |
+|---|---|
+| [`@vbel/core`](packages/core) | Envelope, canonical JSON, hashing, ed25519 signing, chain validation. No I/O. |
+| [`@vbel/records`](packages/records) | Records an app can use: withholdable payloads, link codec, a verdict per record, selective disclosure. You bring your own record shapes. |
+| [`@vbel/adapter-solana`](packages/adapter-solana) | Anchor a hash on Solana (SPL Memo, no custom program). Use a wallet as a signer. |
+| [`@vbel/adapter-ethereum`](packages/adapter-ethereum) | Anchor a hash in the calldata of a zero-value EVM transaction. |
+| [`@vbel/adapter-identity-ledger`](packages/adapter-identity-ledger) | Resolve who a key belongs to from claims carried in the chain itself. |
+| [`@vbel/adapter-identity-static`](packages/adapter-identity-static) | Resolve keys from a list the verifier chooses to trust. |
 
-`core` imports nothing else in this repository; everything else depends on it, never the reverse.
-Swapping a chain is one file that satisfies the `LedgerAdapter` interface in
-[`ledger.ts`](packages/core/src/ledger.ts).
+`core` imports nothing else here. Everything depends on it, never the reverse, so changing chain
+means changing one file that satisfies [`LedgerAdapter`](packages/core/src/ledger.ts).
 
 ## Where to start reading
 
@@ -80,18 +93,6 @@ Swapping a chain is one file that satisfies the `LedgerAdapter` interface in
 | How a record gets its verdict | [`verify.ts`](packages/records/src/verify.ts) |
 | Who signed, and how sure to be | [`identityContext.ts`](packages/records/src/identityContext.ts), [`registration.ts`](packages/records/src/registration.ts) |
 
-## What it proves, and what it does not
-
-It proves that a record was **not changed since it was signed**, in this order, by this key, and
-optionally that it existed by a given time on a public chain.
-
-It does **not** prove that what a record says is true, that goods arrived, that a claim is legally
-enforceable, or that an invoice was not financed elsewhere. A name in a self-asserted identity claim
-is exactly as trustworthy as whoever wrote it, and the library reports it as `self-asserted` rather
-than as verified. Withheld evidence is reported as withheld, never as a clean bill of health.
-
-It is not a qualified electronic ledger under eIDAS 2.0 and it is not a compliance product.
-
 ## Development
 
 ```bash
@@ -102,29 +103,34 @@ pnpm typecheck
 pnpm example
 ```
 
-Anchoring needs a funded testnet key. Copy `.env.example` to `.env`, then:
+<details>
+<summary>Anchoring on a testnet</summary>
+
+Needs a funded testnet key. Copy `.env.example` to `.env`, then:
 
 ```bash
 set -a && source .env && set +a && pnpm --filter @vbel/adapter-solana smoke:anchor
 ```
 
+</details>
+
 ## Status
 
-Pre-1.0. The envelope is frozen; everything above it may change between minor versions until 1.0.
-Signing keys are yours to hold: nothing in this repository stores or recovers one. Records are not
-persisted by the library. A chain is data you keep, or carry in a link.
+**Pre-1.0.** The envelope is frozen at v0.1. Everything above it may change between minor versions.
 
-See [SECURITY.md](SECURITY.md) to report a vulnerability and [CONTRIBUTING.md](CONTRIBUTING.md) to
-contribute.
+- **Keys are yours.** Nothing here stores or recovers one.
+- **Nothing is persisted.** A chain is data you keep, or carry in a link.
+
+To report a vulnerability see [SECURITY.md](SECURITY.md). To contribute see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Provenance
 
-This repository was extracted from the codebase that also holds a demo application and two domain
-modules (delivery and payment), which are not part of it. Its history is filtered to the paths above.
-[`PROVENANCE.md`](PROVENANCE.md) lists, per package, when it first appeared and when it last changed,
-and which source files were added after 28 August 2026, so that what pre-dates a given competition or
-release is a matter of record. An earlier submission of the same idea, built for a hackathon on 26 and
-27 August 2026, is at [st3fansrb/vbel](https://github.com/st3fansrb/vbel) and is unchanged.
+Extracted from a larger codebase that also holds a demo app and two domain modules (delivery and
+payment), which are not part of this repository. [`PROVENANCE.md`](PROVENANCE.md) records, per
+package, when it first appeared and last changed, and which files were added after 28 August 2026.
+The earlier hackathon submission of the same idea (26 and 27 August 2026) is at
+[st3fansrb/vbel](https://github.com/st3fansrb/vbel) and is unchanged.
 
 ## License
 
