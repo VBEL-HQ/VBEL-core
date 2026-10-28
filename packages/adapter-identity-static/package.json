@@ -1,6 +1,6 @@
 {
   "name": "@vbel/adapter-identity-static",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IdentityResolver over a static, explicitly-configured trust registry. The trust root is the file itself \u2014 see src/static-registry.ts.",
   "type": "module",
   "main": "./dist/index.js",

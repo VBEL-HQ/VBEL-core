@@ -1,6 +1,6 @@
 {
   "name": "@vbel/adapter-solana",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LedgerAdapter implementation over the SPL Memo program, Solana devnet. Execution only \u2014 config is injected, never read from process.env here.",
   "type": "module",
   "main": "./dist/index.js",
