@@ -283,7 +283,7 @@ export async function decodeChain(encoded: string, payloadSchemas: PayloadSchema
         throw new ChainDecodeError(`Record at index ${i} has invalid issuer payload: ${issues}`);
       }
 
-      payload = disclosedPayload(storedResult.data, issuerResult.data);
+      payload = disclosedPayload(storedResult.data as object, issuerResult.data as object);
     } else {
       throw new ChainDecodeError(
         `Record at index ${i} has an unrecognised payload state ${JSON.stringify(slotState)}`
