@@ -1,6 +1,6 @@
 {
   "name": "@vbel/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Frozen event envelope, RFC 8785 canonicalization, hashing and ed25519 signing. No I/O.",
   "type": "module",
   "main": "./dist/index.js",
