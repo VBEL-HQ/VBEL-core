@@ -5,3 +5,6 @@ allowBuilds:
   bufferutil: true
   esbuild: true
   utf-8-validate: true
+overrides:
+  stream-json: ">=3.6.0"
+  uuid: ">=11.1.1"
